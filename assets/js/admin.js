@@ -1018,7 +1018,7 @@ function renderPedidos() {
       '<div class="ped-card-body">' +
         '<div class="ped-card-cliente">' + esc(p.cliente) + '</div>' +
         '<div class="ped-card-meta">' +
-          '<span>📞 ' + esc(p.telefono || '—') + '</span>' +
+          '<span>📞 ' + esc(p.celular || '—') + '</span>' +
           '<span>🏠 ' + esc(p.direccion ? (p.direccion.length > 30 ? p.direccion.substring(0, 30) + '...' : p.direccion) : '—') + '</span>' +
           '<span>📍 ' + parseFloat(p.distancia_km || 0).toFixed(1) + ' km • ' + parseInt(p.tiempo_min || 0) + ' min' + (cfgPrecioKm > 0 ? ' • $' + (parseFloat(p.distancia_km || 0) * cfgPrecioKm).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0}) : '') + '</span>' +
         '</div>' +
@@ -1045,7 +1045,8 @@ function abrirPedido(id) {
   document.getElementById('pedModalFecha').textContent = pedidoActual.fecha ? new Date(pedidoActual.fecha).toLocaleString('es-AR') : '';
 
   document.getElementById('pedDetCliente').textContent = pedidoActual.cliente;
-  document.getElementById('pedDetTelefono').textContent = '📞 ' + (pedidoActual.telefono || '—');
+  document.getElementById('pedDetCorreo').textContent  = pedidoActual.correo ? '✉️ ' + pedidoActual.correo : '';
+  document.getElementById('pedDetCelular').textContent = '📞 ' + (pedidoActual.celular || '—');
   document.getElementById('pedDetDireccion').textContent = '🏠 ' + (pedidoActual.direccion || '—');
 
   var ubiEl = document.getElementById('pedDetUbicacion');
@@ -1185,7 +1186,7 @@ function renderClientes() {
     return;
   }
   lista.innerHTML = '<div class="table-card"><table class="table"><thead><tr>' +
-    '<th>Nombre / Correo</th><th>Teléfono</th><th>Dirección / Ubicación</th><th>Pedidos</th><th>Total gastado</th><th>Último pedido</th><th></th>' +
+    '<th>Nombre / Correo</th><th>Celular</th><th>Dirección / Ubicación</th><th>Pedidos</th><th>Total gastado</th><th>Último pedido</th><th></th>' +
     '</tr></thead><tbody>' +
     clientes.map(function(c) { return renderFilaCliente(c); }).join('') +
     '</tbody></table></div>';
@@ -1201,7 +1202,7 @@ function renderFilaCliente(c) {
     : '';
   return '<tr id="cli-row-' + c.id + '" style="cursor:pointer" onclick="abrirDetalleCliente(' + c.id + ')">' +
     '<td><strong>' + esc(c.nombre) + '</strong>' + correo + '</td>' +
-    '<td>' + esc(c.telefono || '—') + '</td>' +
+    '<td>' + esc(c.celular || '—') + '</td>' +
     '<td>' + dir + mapa + '</td>' +
     '<td style="text-align:center">' + c.total_pedidos + '</td>' +
     '<td>$' + Number(c.total_gastado).toLocaleString('es-AR') + '</td>' +
@@ -1220,7 +1221,7 @@ function abrirDetalleCliente(id) {
   if (!c) return;
 
   document.getElementById('cliDetNombre').textContent    = c.nombre || '—';
-  document.getElementById('cliDetTelefono').textContent  = c.telefono || '—';
+  document.getElementById('cliDetCelular').textContent  = c.celular || '—';
   document.getElementById('cliDetCorreo').textContent    = c.correo || '—';
   document.getElementById('cliDetDireccion').textContent = c.direccion || '—';
 
@@ -1260,7 +1261,7 @@ function abrirEditarCliente(id) {
   if (!c) return;
   clienteEditandoId = id;
   document.getElementById('cliNombre').value      = c.nombre      || '';
-  document.getElementById('cliTelefono').value    = c.telefono    || '';
+  document.getElementById('cliCelular').value    = c.celular    || '';
   document.getElementById('cliCorreo').value      = c.correo      || '';
   document.getElementById('cliDireccion').value   = c.direccion   || '';
   document.getElementById('cliContrasena').value  = c.contrasena  || '';
@@ -1288,7 +1289,7 @@ async function guardarCliente() {
   var body = {
     id:          clienteEditandoId,
     nombre:      document.getElementById('cliNombre').value.trim(),
-    telefono:    document.getElementById('cliTelefono').value.trim(),
+    celular:    document.getElementById('cliCelular').value.trim(),
     correo:      document.getElementById('cliCorreo').value.trim(),
     direccion:   document.getElementById('cliDireccion').value.trim(),
     contrasena:  document.getElementById('cliContrasena').value.trim(),
@@ -1302,7 +1303,7 @@ async function guardarCliente() {
     var data = await res.json();
     if (data.ok) {
       var c = clientes.find(function(x) { return x.id === clienteEditandoId; });
-      if (c) { c.nombre = body.nombre; c.telefono = body.telefono; c.correo = body.correo; c.direccion = body.direccion; c.contrasena = body.contrasena; c.clave = body.clave; c.lat = body.lat; c.lng = body.lng; }
+      if (c) { c.nombre = body.nombre; c.celular = body.celular; c.correo = body.correo; c.direccion = body.direccion; c.contrasena = body.contrasena; c.clave = body.clave; c.lat = body.lat; c.lng = body.lng; }
       cerrarModalCliente();
       renderClientes();
       showToast('Cliente actualizado');
@@ -2021,8 +2022,8 @@ function abrirNuevoMensaje() {
     opt.value = c.id;
     opt.dataset.nombre = c.nombre || '';
     opt.dataset.correo = c.correo || '';
-    opt.dataset.telefono = c.telefono || '';
-    opt.textContent = c.nombre + (c.telefono ? ' · ' + c.telefono : '');
+    opt.dataset.celular = c.celular || '';
+    opt.textContent = c.nombre + (c.celular ? ' · ' + c.celular : '');
     sel.appendChild(opt);
   });
 
@@ -2073,7 +2074,7 @@ function onMsgClienteChange(clienteId) {
   document.getElementById('msgDestinatario').value = opt.dataset.nombre || '';
   document.getElementById('msgDestino').value = canal === 'email'
     ? (opt.dataset.correo || '')
-    : (opt.dataset.telefono || '');
+    : (opt.dataset.celular || '');
 }
 
 async function enviarMensaje() {
@@ -2186,7 +2187,7 @@ async function cargarDashboard() {
     const cliBody = document.getElementById('dashClientesBody');
     const clis = (rCli.data || []).slice(0, 8);
     cliBody.innerHTML = clis.length ? clis.map(c =>
-      `<tr ${rowStyle} onclick="irDetalle('clientes',${c.id})"><td><strong>${esc(c.nombre)}</strong></td><td>${esc(c.telefono || '—')}</td><td>${c.total_pedidos}</td></tr>`
+      `<tr ${rowStyle} onclick="irDetalle('clientes',${c.id})"><td><strong>${esc(c.nombre)}</strong></td><td>${esc(c.celular || '—')}</td><td>${c.total_pedidos}</td></tr>`
     ).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Sin clientes</td></tr>';
 
     // Últimos mensajes

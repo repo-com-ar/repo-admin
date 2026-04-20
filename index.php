@@ -110,7 +110,7 @@ $authUser = authUser();
           <div class="table-card">
             <div class="dash-table-header dash-link" onclick="irSeccion('clientes')">👥 Últimos clientes <span class="dash-ver-mas">Ver todos →</span></div>
             <table>
-              <thead><tr><th>Nombre</th><th>Teléfono</th><th>Pedidos</th></tr></thead>
+              <thead><tr><th>Nombre</th><th>Celular</th><th>Pedidos</th></tr></thead>
               <tbody id="dashClientesBody"><tr><td colspan="3" style="text-align:center;padding:20px"><div class="spin"></div></td></tr></tbody>
             </table>
           </div>
@@ -825,7 +825,8 @@ $authUser = authUser();
       <div class="ped-detail-section">
         <div class="ped-detail-label">Cliente</div>
         <div id="pedDetCliente" style="font-weight:600"></div>
-        <div id="pedDetTelefono" style="font-size:.85rem;color:var(--muted)"></div>
+        <div id="pedDetCorreo" style="font-size:.85rem;color:var(--muted)"></div>
+        <div id="pedDetCelular" style="font-size:.85rem;color:var(--muted)"></div>
         <div id="pedDetDireccion" style="font-size:.85rem;color:var(--muted)"></div>
         <div id="pedDetUbicacion" style="font-size:.85rem;display:none"><a id="pedDetMapLink" href="#" target="_blank" style="color:var(--primary);font-weight:600;text-decoration:none">📍 Ver en Google Maps</a></div>
         <div id="pedDetNotas" style="font-size:.85rem;color:var(--muted);font-style:italic;display:none"></div>
@@ -881,13 +882,13 @@ $authUser = authUser();
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
 
       <div class="ped-detail-section">
-        <div class="ped-detail-label">Teléfono</div>
-        <div id="cliDetTelefono" style="font-weight:600"></div>
+        <div class="ped-detail-label">Correo electrónico</div>
+        <div id="cliDetCorreo" style="font-weight:600"></div>
       </div>
 
       <div class="ped-detail-section">
-        <div class="ped-detail-label">Correo electrónico</div>
-        <div id="cliDetCorreo" style="font-weight:600"></div>
+        <div class="ped-detail-label">Celular</div>
+        <div id="cliDetCelular" style="font-weight:600"></div>
       </div>
 
       <div class="ped-detail-section">
@@ -945,19 +946,17 @@ $authUser = authUser();
       <button class="btn btn-ghost" onclick="cerrarModalCliente()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Nombre *</label>
-          <input type="text" id="cliNombre" placeholder="Nombre completo">
-        </div>
-        <div class="form-group">
-          <label>Teléfono</label>
-          <input type="tel" id="cliTelefono" placeholder="Ej: 11 2345-6789">
-        </div>
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" id="cliNombre" placeholder="Nombre completo">
       </div>
       <div class="form-group">
         <label>Correo electrónico</label>
         <input type="email" id="cliCorreo" placeholder="email@ejemplo.com">
+      </div>
+      <div class="form-group">
+        <label>Celular</label>
+        <input type="tel" id="cliCelular" placeholder="Ej: 11 2345-6789">
       </div>
       <div class="form-group">
         <label>Dirección</label>

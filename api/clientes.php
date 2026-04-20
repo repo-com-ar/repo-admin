@@ -8,7 +8,7 @@
  *   Incluye stats globales: total de clientes y cuántos tienen al menos un pedido.
  *
  * PUT    /repo-admin/api/clientes.php
- *   Actualiza datos de un cliente. Body JSON: { id, nombre?, telefono?, direccion? }
+ *   Actualiza datos de un cliente. Body JSON: { id, nombre?, celular?, direccion? }
  *
  * DELETE /repo-admin/api/clientes.php?id={id}
  *   Elimina un cliente. Desvincula sus pedidos (cliente_id → NULL) antes de borrar.
@@ -54,14 +54,14 @@ switch ($method) {
         $params = [];
 
         if ($q) {
-            $where[] = '(c.nombre LIKE ? OR c.telefono LIKE ? OR c.direccion LIKE ?)';
+            $where[] = '(c.nombre LIKE ? OR c.celular LIKE ? OR c.direccion LIKE ?)';
             $like = "%$q%";
             $params[] = $like;
             $params[] = $like;
             $params[] = $like;
         }
 
-        $sql = "SELECT c.id, c.nombre, c.telefono, c.direccion, c.correo, c.contrasena, c.clave, c.lat, c.lng, c.created_at,
+        $sql = "SELECT c.id, c.nombre, c.celular, c.direccion, c.correo, c.contrasena, c.clave, c.lat, c.lng, c.created_at,
                        COUNT(p.id) as total_pedidos,
                        COALESCE(SUM(p.total), 0) as total_gastado,
                        MAX(p.created_at) as ultimo_pedido
@@ -111,9 +111,9 @@ switch ($method) {
             $campos[] = 'nombre = ?';
             $params[] = trim($body['nombre']);
         }
-        if (isset($body['telefono'])) {
-            $campos[] = 'telefono = ?';
-            $params[] = trim($body['telefono']);
+        if (isset($body['celular'])) {
+            $campos[] = 'celular = ?';
+            $params[] = trim($body['celular']);
         }
         if (isset($body['direccion'])) {
             $campos[] = 'direccion = ?';

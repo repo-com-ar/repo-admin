@@ -104,14 +104,14 @@ switch ($method) {
             $params[] = $estado;
         }
         if ($q) {
-            $where[] = '(p.numero LIKE ? OR p.cliente LIKE ? OR p.telefono LIKE ?)';
+            $where[] = '(p.numero LIKE ? OR p.cliente LIKE ? OR p.celular LIKE ?)';
             $like = "%$q%";
             $params[] = $like;
             $params[] = $like;
             $params[] = $like;
         }
 
-        $sql = "SELECT p.id, p.numero, p.cliente, p.telefono, p.direccion, p.notas, p.total, p.estado, p.lat, p.lng, p.distancia_km, p.tiempo_min, p.created_at as fecha
+        $sql = "SELECT p.id, p.numero, p.cliente, p.correo, p.celular, p.direccion, p.notas, p.total, p.estado, p.lat, p.lng, p.distancia_km, p.tiempo_min, p.created_at as fecha
                 FROM pedidos p"
              . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '')
              . " ORDER BY p.id DESC LIMIT 100";
