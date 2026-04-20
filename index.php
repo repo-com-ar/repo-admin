@@ -19,7 +19,7 @@ $authUser = authUser();
   <!-- ===== Sidebar ===== -->
   <aside class="sidebar" id="mainSidebar">
     <div class="sidebar-logo">
-      🛒 Repo Admin
+      <img src="assets/img/repo_logo_black.png" alt="Repo" style="height:36px; width:auto; display:block;">
     </div>
     <nav class="sidebar-nav">
       <a class="nav-item active" href="#" onclick="cambiarSeccion('inicio', this)" data-section="inicio">

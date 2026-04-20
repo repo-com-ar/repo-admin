@@ -5,8 +5,8 @@
   --bg:        #f4f6fb;
   --surface:   #ffffff;
   --border:    #e2e8f0;
-  --primary:   #ff6b35;
-  --primary-h: #e55a26;
+  --primary:   #FFA000;
+  --primary-h: #e08c00;
   --danger:    #ef4444;
   --success:   #22c55e;
   --warn:      #f59e0b;
@@ -79,7 +79,7 @@ input[type=text], input[type=number], input[type=url], input[type=tel], input[ty
   color: var(--text); outline: none; transition: border .15s;
   font-family: inherit;
 }
-input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,53,.12); }
+input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,160,0,.12); }
 textarea { resize: vertical; min-height: 60px; }
 
 .search-input { width: 240px; }
@@ -328,7 +328,7 @@ tbody tr:hover { background: #fafafa; }
   box-shadow: var(--shadow);
   transition: box-shadow .15s, border-color .15s;
 }
-.cat-card:hover { border-color: var(--primary); box-shadow: 0 2px 12px rgba(255,107,53,.1); }
+.cat-card:hover { border-color: var(--primary); box-shadow: 0 2px 12px rgba(255,160,0,.1); }
 
 .cat-card.cat-inactiva { opacity: .5; }
 
@@ -368,7 +368,7 @@ tbody tr:hover { background: #fafafa; }
   box-shadow: var(--shadow);
   transition: border-color .15s, box-shadow .15s;
 }
-.ped-card:hover { border-color: var(--primary); box-shadow: 0 2px 12px rgba(255,107,53,.1); }
+.ped-card:hover { border-color: var(--primary); box-shadow: 0 2px 12px rgba(255,160,0,.1); }
 
 .ped-card-head {
   display: flex; align-items: center; justify-content: space-between;
