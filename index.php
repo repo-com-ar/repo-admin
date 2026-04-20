@@ -19,7 +19,8 @@ $authUser = authUser();
   <!-- ===== Sidebar ===== -->
   <aside class="sidebar" id="mainSidebar">
     <div class="sidebar-logo">
-      <img src="assets/img/repo_logo_black.png" alt="Repo" style="height:36px; width:auto; display:block;">
+      <img class="logo-light" src="assets/img/repo_logo_black.png" alt="Repo" style="height:36px; width:auto; display:block;">
+      <img class="logo-dark"  src="assets/img/repo_logo_withe.png" alt="Repo" style="height:36px; width:auto; display:none;">
     </div>
     <nav class="sidebar-nav">
       <a class="nav-item active" href="#" onclick="cambiarSeccion('inicio', this)" data-section="inicio">
@@ -65,10 +66,15 @@ $authUser = authUser();
     <div class="topbar">
       <button class="hamburger" id="menuToggle" onclick="toggleSidebar()" aria-label="Menú">&#9776;</button>
       <div class="topbar-title">Gestión de Productos</div>
-      <div class="topbar-meta" id="topbarMeta"></div>
       <div class="topbar-user">
-        <span class="topbar-username">👤 <?= htmlspecialchars($authUser['usr'] ?? '') ?></span>
-        <button class="btn btn-ghost btn-sm" onclick="cerrarSesionAdmin()">Salir</button>
+        <div class="user-menu-wrap" id="userMenuWrap">
+          <button class="topbar-username" onclick="toggleUserMenu()" id="userMenuBtn">
+            👤 <?= htmlspecialchars($authUser['usr'] ?? '') ?> <span class="user-menu-arrow">▾</span>
+          </button>
+          <div class="user-dropdown" id="userDropdown">
+            <button onclick="cerrarSesionAdmin()">🔒 Cerrar sesión</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -315,6 +321,46 @@ $authUser = authUser();
                 <span style="margin-left:8px;color:var(--text-secondary);font-size:0.9rem">/ km</span>
               </div>
               <div class="config-hint" id="cfgPrecioKmHint">Valor actual: $0 / km — Dejá en 0 para no cobrar envío por distancia.</div>
+            </div>
+          </div>
+
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-card-icon">🕐</span>
+              <div>
+                <div class="config-card-title">Fecha y hora del sistema</div>
+                <div class="config-card-desc">Hora actual del servidor PHP y de la base de datos.</div>
+              </div>
+            </div>
+            <div class="config-card-body">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div>
+                  <div style="font-size:.75rem;color:var(--muted);margin-bottom:2px">Servidor (PHP)</div>
+                  <div id="cfgFechaServidor" style="font-size:.9rem;font-weight:600;font-family:monospace">—</div>
+                </div>
+                <div>
+                  <div style="font-size:.75rem;color:var(--muted);margin-bottom:2px">Base de datos (MySQL)</div>
+                  <div id="cfgFechaBD" style="font-size:.9rem;font-weight:600;font-family:monospace">—</div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-ghost" style="margin-top:14px;font-size:.8rem" onclick="cargarFechasSistema()">↻ Actualizar</button>
+            </div>
+          </div>
+
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-card-icon">🌙</span>
+              <div>
+                <div class="config-card-title">Modo oscuro</div>
+                <div class="config-card-desc">Cambia la apariencia del panel entre modo claro y oscuro.</div>
+              </div>
+            </div>
+            <div class="config-card-body">
+              <label class="toggle-switch">
+                <input type="checkbox" id="cfgModoOscuro" onchange="adminTema.toggle(this.checked)">
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-label" id="cfgModoOscuroLabel">Modo claro</span>
+              </label>
             </div>
           </div>
 

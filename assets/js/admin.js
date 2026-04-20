@@ -5,7 +5,7 @@
     return _fetch.apply(this, arguments).then(function(res) {
       if (res.status === 401) {
         res.clone().json().then(function(d) {
-          if (d && d.login) window.location.href = 'login.php';
+          if (d && d.login) window.location.href = 'login';
         }).catch(function(){});
       }
       return res;
@@ -14,14 +14,14 @@
 })();
 
 /* ===== Config ===== */
-const API = 'api/productos.php';
-const UPLOAD_API = 'api/upload.php';
-const CAT_API = 'api/categorias.php';
-const PED_API = 'api/pedidos.php';
-const CFG_API = 'api/configuracion.php';
-const CLI_API = 'api/clientes.php';
-const PROV_API = 'api/proveedores.php';
-const COMP_API = 'api/compras.php';
+const API = 'api/productos';
+const UPLOAD_API = 'api/upload';
+const CAT_API = 'api/categorias';
+const PED_API = 'api/pedidos';
+const CFG_API = 'api/configuracion';
+const CLI_API = 'api/clientes';
+const PROV_API = 'api/proveedores';
+const COMP_API = 'api/compras';
 
 let CATEGORIAS = [];
 
@@ -393,10 +393,41 @@ function showToast(msg, error = false) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+/* ===== User menu ===== */
+function toggleUserMenu() {
+  document.getElementById('userDropdown').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('userMenuWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('userDropdown').classList.remove('open');
+  }
+});
+
+/* ===== Admin tema ===== */
+const adminTema = {
+  init() {
+    const saved = localStorage.getItem('adminTema') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    const chk = document.getElementById('cfgModoOscuro');
+    if (chk) { chk.checked = saved === 'dark'; this._updateLabel(saved); }
+  },
+  toggle(isDark) {
+    const t = isDark ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('adminTema', t);
+    this._updateLabel(t);
+  },
+  _updateLabel(t) {
+    const lbl = document.getElementById('cfgModoOscuroLabel');
+    if (lbl) lbl.textContent = t === 'dark' ? 'Modo oscuro' : 'Modo claro';
+  }
+};
+
 /* ===== Navegación de secciones ===== */
 async function cerrarSesionAdmin() {
-  await fetch('api/auth.php', { method: 'DELETE' });
-  window.location.href = 'login.php';
+  await fetch('api/auth', { method: 'DELETE' });
+  window.location.href = 'login';
 }
 
 function toggleSidebar() {
@@ -439,6 +470,9 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionConfig').style.display = '';
     topbar.textContent = 'Configuración';
     cargarConfiguracion();
+    cargarFechasSistema();
+    const chk = document.getElementById('cfgModoOscuro');
+    if (chk) { const t = localStorage.getItem('adminTema') || 'light'; chk.checked = t === 'dark'; adminTema._updateLabel(t); }
   } else if (seccion === 'clientes') {
     document.getElementById('seccionClientes').style.display = '';
     topbar.textContent = 'Gestión de Clientes';
@@ -467,7 +501,7 @@ function cambiarSeccion(seccion, navEl) {
 }
 
 /* ===== Usuarios ===== */
-const USR_API = 'api/usuarios.php';
+const USR_API = 'api/usuarios';
 let usuarios = [];
 let usrBusqueda = '';
 let usrEditandoId = null;
@@ -604,7 +638,7 @@ async function cargarEventos() {
 
   try {
     const params = eventoBusqueda ? '?q=' + encodeURIComponent(eventoBusqueda) : '';
-    const res  = await fetch('api/eventos.php' + params);
+    const res  = await fetch('api/eventos' + params);
     const data = await res.json();
     if (data.ok) {
       eventosData = data.data || [];
@@ -690,7 +724,7 @@ async function cargarMensajes() {
     if (mensajeBusqueda) params.set('q', mensajeBusqueda);
     if (mensajeFiltroCanal !== 'todos') params.set('canal', mensajeFiltroCanal);
     const qs = params.toString() ? '?' + params.toString() : '';
-    const res  = await fetch('api/mensajes.php' + qs);
+    const res  = await fetch('api/mensajes' + qs);
     const data = await res.json();
     if (data.ok) {
       mensajesData = data.data || [];
@@ -2063,7 +2097,7 @@ async function enviarMensaje() {
   btn.textContent = 'Enviando...';
 
   try {
-    const res  = await fetch('api/enviar_mensaje.php', {
+    const res  = await fetch('api/enviar_mensaje', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ canal, destinatario, destino, asunto, cuerpo }),
@@ -2114,11 +2148,11 @@ async function cargarDashboard() {
 
   try {
     const [rProd, rCli, rPed, rComp, rMsg] = await Promise.all([
-      fetch('api/productos.php').then(r => r.json()),
-      fetch('api/clientes.php').then(r => r.json()),
-      fetch('api/pedidos.php').then(r => r.json()),
-      fetch('api/compras.php').then(r => r.json()),
-      fetch('api/mensajes.php').then(r => r.json()),
+      fetch('api/productos').then(r => r.json()),
+      fetch('api/clientes').then(r => r.json()),
+      fetch('api/pedidos').then(r => r.json()),
+      fetch('api/compras').then(r => r.json()),
+      fetch('api/mensajes').then(r => r.json()),
     ]);
 
     // Stats cards
@@ -2134,7 +2168,7 @@ async function cargarDashboard() {
     if (rCli.ok)   document.getElementById('dashProv').textContent     = '—';
 
     // Proveedores
-    fetch('api/proveedores.php').then(r => r.json()).then(d => {
+    fetch('api/proveedores').then(r => r.json()).then(d => {
       if (d.ok) document.getElementById('dashProv').textContent = d.stats?.total ?? d.data?.length ?? '—';
     });
 
@@ -2176,8 +2210,24 @@ async function cargarDashboard() {
   }
 }
 
+/* ===== Fecha/hora sistema ===== */
+async function cargarFechasSistema() {
+  try {
+    var res  = await fetch('api/sistema');
+    var data = await res.json();
+    if (data.ok) {
+      document.getElementById('cfgFechaServidor').textContent = data.servidor;
+      document.getElementById('cfgFechaBD').textContent       = data.base_datos;
+    }
+  } catch (e) {
+    document.getElementById('cfgFechaServidor').textContent = 'Error';
+    document.getElementById('cfgFechaBD').textContent       = 'Error';
+  }
+}
+
 /* ===== Init ===== */
 document.addEventListener('DOMContentLoaded', async () => {
+  adminTema.init();
   await cargarCategorias();
   poblarSelects();
   cargarDashboard();
