@@ -31,7 +31,7 @@ require_once __DIR__ . '/../lib/auth_check.php';
 requireAuth();
 
 
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../repo-api/config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

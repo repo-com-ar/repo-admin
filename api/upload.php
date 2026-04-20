@@ -2,13 +2,13 @@
 /**
  * API admin — Upload de imágenes de productos
  *
- * POST /lider-admin/api/upload.php (multipart/form-data, campo: imagen)
- *   Sube una imagen al directorio lider-media/productos/.
+ * POST /repo-admin/api/upload.php (multipart/form-data, campo: imagen)
+ *   Sube una imagen al directorio repo-media/productos/.
  *   Valida tipo MIME real (JPG, PNG, WEBP, GIF) y tamaño máximo de 5MB.
  *   Genera un nombre de archivo seguro: {timestamp}_{random8bytes}.{ext}
  *
  * Respuesta:
- *   { ok: true, archivo: "nombre.jpg", url: "../lider-media/productos/nombre.jpg" }
+ *   { ok: true, archivo: "nombre.jpg", url: "https://media.repo.com.ar/productos/nombre.jpg" }
  *
  * Errores posibles:
  *   Tipo no permitido, excede 5MB, carpeta destino inexistente, error de escritura.
@@ -30,11 +30,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Carpeta destino con permisos de escritura
-$uploadDir = __DIR__ . '/../../lider-media/productos/';
+$uploadDir = '/var/www/repo-media/productos/';
 
 if (!is_dir($uploadDir)) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'Carpeta de destino no existe']);
+    echo json_encode(['ok' => false, 'error' => 'Carpeta de destino no existe: ' . $uploadDir]);
+    exit;
+}
+
+if (!is_writable($uploadDir)) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'Sin permisos de escritura en: ' . $uploadDir]);
     exit;
 }
 
@@ -83,7 +89,7 @@ if (!move_uploaded_file($file['tmp_name'], $rutaDestino)) {
 }
 
 // Construir URL relativa al media
-$urlRelativa = '../lider-media/productos/' . $nombreArchivo;
+$urlRelativa = 'https://media.repo.com.ar/productos/' . $nombreArchivo;
 
 echo json_encode([
     'ok'      => true,

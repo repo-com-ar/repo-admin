@@ -2,19 +2,19 @@
 /**
  * API admin — Productos (CRUD)
  *
- * GET    /lider-admin/api/productos.php[?id={id}&categoria={cat}&q={texto}]
+ * GET    /repo-admin/api/productos.php[?id={id}&categoria={cat}&q={texto}]
  *   Con ?id devuelve un único producto. Sin él lista con filtros opcionales.
  *   Campos: id, nombre, precio, categoria, emoji, imagen, unidad, peso_pieza, stock_actual, stock_comprometido, stock_minimo, stock_recomendado.
  *
- * POST   /lider-admin/api/productos.php
+ * POST   /repo-admin/api/productos.php
  *   Crea un producto. Body JSON: { nombre, categoria, precio?, emoji?, imagen?, unidad?, peso_pieza?, stock_actual?, stock_comprometido?, stock_minimo?, stock_recomendado? }
  *   El nombre se normaliza a Title Case con mb_convert_case.
  *
- * PUT    /lider-admin/api/productos.php
+ * PUT    /repo-admin/api/productos.php
  *   Actualiza un producto existente. Body JSON con id + campos a modificar.
  *
- * DELETE /lider-admin/api/productos.php?id={id}
- *   Elimina el producto y borra su imagen de lider-media/productos/ si es local.
+ * DELETE /repo-admin/api/productos.php?id={id}
+ *   Elimina el producto y borra su imagen de repo-media/productos/ si es local.
  */
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -27,7 +27,7 @@ require_once __DIR__ . '/../lib/auth_check.php';
 requireAuth();
 
 
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../repo-api/config/db.php';
 
 try {
     $pdo = getDB();
@@ -59,6 +59,9 @@ switch ($method) {
                 $item['stock_minimo']      = (int)($item['stock_minimo'] ?? 0);
                 $item['stock_recomendado'] = (int)($item['stock_recomendado'] ?? 3);
                 $item['stock'] = $item['stock_actual'] > 0;
+                if (!empty($item['imagen']) && strpos($item['imagen'], 'http') !== 0) {
+                    $item['imagen'] = 'https://media.repo.com.ar/productos/' . basename($item['imagen']);
+                }
             }
             echo json_encode(['ok' => true, 'data' => $item ?: null]);
             break;
@@ -88,6 +91,9 @@ switch ($method) {
             $p['stock_minimo']      = (int)($p['stock_minimo'] ?? 0);
             $p['stock_recomendado'] = (int)($p['stock_recomendado'] ?? 3);
             $p['stock'] = $p['stock_actual'] > 0;
+            if (!empty($p['imagen']) && strpos($p['imagen'], 'http') !== 0) {
+                $p['imagen'] = 'https://media.repo.com.ar/productos/' . basename($p['imagen']);
+            }
         }
 
         echo json_encode(['ok' => true, 'data' => $result, 'total' => count($result)]);
@@ -226,9 +232,9 @@ switch ($method) {
         $stmt = $pdo->prepare("DELETE FROM productos WHERE id = ?");
         $stmt->execute([$id]);
 
-        // Eliminar imagen local si existe en lider-media/productos/
+        // Eliminar imagen local si existe en repo-media/productos/
         if (!empty($producto['imagen'])) {
-            $mediaDir = __DIR__ . '/../../lider-media/productos/';
+            $mediaDir = __DIR__ . '/../../repo-media/productos/';
             $nombreArchivo = basename($producto['imagen']);
             $rutaArchivo = $mediaDir . $nombreArchivo;
             if (strpos(realpath($rutaArchivo) ?: '', realpath($mediaDir)) === 0 && is_file($rutaArchivo)) {

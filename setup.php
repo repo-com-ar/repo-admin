@@ -3,7 +3,7 @@
  * Setup inicial — crea el usuario administrador.
  * Eliminar este archivo luego de usarlo.
  */
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../repo-api/config/db.php';
 
 $error   = '';
 $success = '';

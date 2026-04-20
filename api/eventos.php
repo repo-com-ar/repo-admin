@@ -17,7 +17,7 @@ require_once __DIR__ . '/../lib/auth_check.php';
 requireAuth();
 
 
-$configPath = __DIR__ . '/../../config/db.php';
+$configPath = __DIR__ . '/../../repo-api/config/db.php';
 if (!file_exists($configPath)) {
     http_response_code(500);
     echo json_encode(['ok' => false, 'error' => 'config no encontrado']);

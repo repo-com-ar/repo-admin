@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit; }
 
 require_once __DIR__ . '/../lib/jwt.php';
 require_once __DIR__ . '/../lib/auth_check.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../repo-api/config/db.php';
 
 // ---- DELETE: logout ----
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
