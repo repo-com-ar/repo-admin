@@ -13,7 +13,7 @@
 require_once __DIR__ . '/jwt.php';
 
 function authUser(): ?array {
-    $token = $_COOKIE['lider_token'] ?? '';
+    $token = $_COOKIE['repo_token'] ?? '';
     if (!$token) {
         $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         if (preg_match('/Bearer\s+(\S+)/i', $auth, $m)) {
@@ -47,7 +47,7 @@ function requireAuth(): void {
 
     // Si no hay cookie, pasar error por query
     $dir = rtrim(dirname($self), '/');
-    $hasCookie = isset($_COOKIE['lider_token']);
+    $hasCookie = isset($_COOKIE['repo_token']);
     $err = $hasCookie ? '2' : '1';
     header('Location: ' . $dir . '/login.php?error=' . $err);
     exit;
@@ -58,11 +58,11 @@ function setAuthCookie(string $token): void {
     // Forzar secure=false en desarrollo para permitir cookies sin HTTPS
     // Usar path global y sin domain para máxima compatibilidad
     // Para desarrollo local (HTTP): SameSite=Lax y secure=false
-    setcookie('lider_token', $token, $exp, '/');
+    setcookie('repo_token', $token, $exp, '/');
 }
 
 function clearAuthCookie(): void {
-    setcookie('lider_token', '', [
+    setcookie('repo_token', '', [
         'expires'  => time() - 3600,
         'path'     => '/',
         'samesite' => 'Lax',

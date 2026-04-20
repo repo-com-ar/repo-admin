@@ -2,15 +2,15 @@
 /**
  * API admin — Clientes (CRUD)
  *
- * GET    /lider-admin/api/clientes.php[?q={texto}]
+ * GET    /repo-admin/api/clientes.php[?q={texto}]
  *   Lista clientes con conteo de pedidos y monto total gastado.
  *   Soporta búsqueda libre por nombre, teléfono o dirección.
  *   Incluye stats globales: total de clientes y cuántos tienen al menos un pedido.
  *
- * PUT    /lider-admin/api/clientes.php
+ * PUT    /repo-admin/api/clientes.php
  *   Actualiza datos de un cliente. Body JSON: { id, nombre?, telefono?, direccion? }
  *
- * DELETE /lider-admin/api/clientes.php?id={id}
+ * DELETE /repo-admin/api/clientes.php?id={id}
  *   Elimina un cliente. Desvincula sus pedidos (cliente_id → NULL) antes de borrar.
  */
 ini_set('display_errors', 1);

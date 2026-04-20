@@ -7,7 +7,7 @@ $authUser = authUser();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lider Admin</title>
+  <title>Repo Admin</title>
   <link rel="stylesheet" href="assets/css/admin.css?v=<?= time() ?>">
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5WChZRhfb478oxJr7kUBwufoe-G_5SBg"></script>
 </head>
@@ -19,7 +19,7 @@ $authUser = authUser();
   <!-- ===== Sidebar ===== -->
   <aside class="sidebar" id="mainSidebar">
     <div class="sidebar-logo">
-      🛒 Lider Admin
+      🛒 Repo Admin
     </div>
     <nav class="sidebar-nav">
       <a class="nav-item active" href="#" onclick="cambiarSeccion('inicio', this)" data-section="inicio">

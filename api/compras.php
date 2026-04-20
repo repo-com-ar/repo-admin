@@ -2,16 +2,16 @@
 /**
  * API admin — Compras (CRUD)
  *
- * GET    /lider-admin/api/compras.php[?estado={estado}&q={texto}]
+ * GET    /repo-admin/api/compras.php[?estado={estado}&q={texto}]
  *   Lista compras con sus ítems. Filtra por estado y/o búsqueda libre.
  *
- * POST   /lider-admin/api/compras.php
+ * POST   /repo-admin/api/compras.php
  *   Crea una compra. Body JSON: { proveedor_id, proveedor, notas?, items: [{producto_id?, nombre, precio, cantidad}] }
  *
- * PUT    /lider-admin/api/compras.php
+ * PUT    /repo-admin/api/compras.php
  *   Cambia el estado de una compra. Body JSON: { id, estado }
  *
- * DELETE /lider-admin/api/compras.php?id={id}
+ * DELETE /repo-admin/api/compras.php?id={id}
  *   Elimina una compra y sus ítems.
  */
 ini_set('display_errors', 1);

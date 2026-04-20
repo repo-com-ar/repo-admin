@@ -2,7 +2,7 @@
 /**
  * API admin — Enviar mensaje vía datarocket
  *
- * POST /lider-admin/api/enviar_mensaje.php
+ * POST /repo-admin/api/enviar_mensaje.php
  * Body JSON: {
  *   canal:        "email" | "whatsapp",
  *   destinatario: "Nombre visible",
@@ -98,7 +98,7 @@ try {
     $proyecto   = $cfg['datarocket_proyecto']            ?? 'vigicom';
     $canalEmail = $cfg['datarocket_canal_email']         ?? 'databox';
     $canalWa    = $cfg['datarocket_canal_wa']            ?? 'repo-hum';
-    $remitente  = $cfg['datarocket_remitente']           ?? 'Lider Online';
+    $remitente  = $cfg['datarocket_remitente']           ?? 'Repo Online';
     $remite     = $cfg['datarocket_remite']              ?? '1169391123';
 
     $estadoFinal = 'pendiente';

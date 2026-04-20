@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Setup — Lider Admin</title>
+  <title>Setup — Repo Admin</title>
   <style>
     body { font-family: sans-serif; background:#f1f5f9; display:flex; align-items:center; justify-content:center; min-height:100vh; }
     .card { background:#fff; border-radius:12px; padding:36px; width:360px; box-shadow:0 4px 20px rgba(0,0,0,.1); }

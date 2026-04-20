@@ -2,10 +2,10 @@
 /**
  * API admin — Proveedores (CRUD)
  *
- * GET    /lider-admin/api/proveedores.php[?q={texto}]
- * POST   /lider-admin/api/proveedores.php  — crea proveedor
- * PUT    /lider-admin/api/proveedores.php   — actualiza proveedor
- * DELETE /lider-admin/api/proveedores.php?id={id}
+ * GET    /repo-admin/api/proveedores.php[?q={texto}]
+ * POST   /repo-admin/api/proveedores.php  — crea proveedor
+ * PUT    /repo-admin/api/proveedores.php   — actualiza proveedor
+ * DELETE /repo-admin/api/proveedores.php?id={id}
  */
 ini_set('display_errors', 1);
 error_reporting(E_ALL);

@@ -2,16 +2,16 @@
 /**
  * API admin — Usuarios del backoffice
  *
- * GET    /lider-admin/api/usuarios.php[?q={texto}]
+ * GET    /repo-admin/api/usuarios.php[?q={texto}]
  *   Lista usuarios del panel de administración.
  *
- * POST   /lider-admin/api/usuarios.php
+ * POST   /repo-admin/api/usuarios.php
  *   Crea un nuevo usuario. Body JSON: { usuario, correo, celular, contrasena }
  *
- * PUT    /lider-admin/api/usuarios.php
+ * PUT    /repo-admin/api/usuarios.php
  *   Actualiza un usuario. Body JSON: { id, usuario?, correo?, celular?, contrasena? }
  *
- * DELETE /lider-admin/api/usuarios.php?id={id}
+ * DELETE /repo-admin/api/usuarios.php?id={id}
  *   Elimina un usuario.
  */
 ini_set('display_errors', 1);

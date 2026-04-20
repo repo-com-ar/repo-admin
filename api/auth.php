@@ -2,11 +2,11 @@
 /**
  * API de autenticación
  *
- * POST   /lider-admin/api/auth.php  { correo, contrasena }
+ * POST   /repo-admin/api/auth.php  { correo, contrasena }
  *   Valida credenciales contra tabla usuarios.
- *   Respuesta: { ok, usuario, token } + cookie lider_token
+ *   Respuesta: { ok, usuario, token } + cookie repo_token
  *
- * DELETE /lider-admin/api/auth.php
+ * DELETE /repo-admin/api/auth.php
  *   Cierra sesión eliminando la cookie.
  */
 header('Content-Type: application/json');

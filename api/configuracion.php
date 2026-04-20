@@ -2,11 +2,11 @@
 /**
  * API admin — Configuración del sistema
  *
- * GET /lider-admin/api/configuracion.php
+ * GET /repo-admin/api/configuracion.php
  *   Devuelve todos los parámetros de configuración como objeto clave→valor.
  *   Crea la tabla `configuracion` e inserta defaults si aún no existen.
  *
- * PUT /lider-admin/api/configuracion.php
+ * PUT /repo-admin/api/configuracion.php
  *   Actualiza uno o más parámetros. Body JSON: { clave: valor, ... }
  *   Solo se aceptan claves permitidas: pedido_minimo, centro_dist_lat,
  *   centro_dist_lng, precio_km.
@@ -61,7 +61,7 @@ $defaults = [
     'datarocket_proyecto'  => 'vigicom',
     'datarocket_canal_email' => 'databox',
     'datarocket_canal_wa'  => 'repo-hum',
-    'datarocket_remitente' => 'Lider Online',
+    'datarocket_remitente' => 'Repo Online',
     'datarocket_remite'    => '1169391123',
 ];
 foreach ($defaults as $clave => $valorDef) {

@@ -1,11 +1,11 @@
-# Lider Admin
+# Repo Admin
 
-Panel de administración web para el sistema **Lider Online**. Permite gestionar todos los aspectos del negocio desde una interfaz centralizada con soporte mobile.
+Panel de administración web para el sistema **Repo Online**. Permite gestionar todos los aspectos del negocio desde una interfaz centralizada con soporte mobile.
 
 ## Acceso
 
 ```
-/lider-admin/index.php
+/repo-admin/index.php
 ```
 
 No requiere build. Es HTML + PHP + JS vanilla.
@@ -31,7 +31,7 @@ No requiere build. Es HTML + PHP + JS vanilla.
 
 ## API endpoints
 
-Todos en `/lider-admin/api/`:
+Todos en `/repo-admin/api/`:
 
 | Archivo | Métodos | Descripción |
 |---|---|---|
@@ -52,7 +52,7 @@ Todos en `/lider-admin/api/`:
 ## Estructura de archivos
 
 ```
-lider-admin/
+repo-admin/
 ├── index.php               # SPA principal (HTML + sidebar + todos los modales)
 ├── api/                    # Endpoints REST PHP
 ├── assets/
@@ -65,7 +65,7 @@ lider-admin/
 
 ## Base de datos
 
-Comparte la base de datos `lider` con lider-app. Conexión definida en `/config/db.php`.
+Comparte la base de datos `repo` con repo-app. Conexión definida en `/config/db.php`.
 
 Tablas principales: `productos`, `categorias`, `pedidos`, `pedido_items`, `clientes`, `compras`, `compra_items`, `proveedores`, `mensajes`, `eventos`, `configuracion`.
 

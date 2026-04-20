@@ -2,7 +2,7 @@
 /**
  * API admin — Mensajes enviados (solo lectura)
  *
- * GET /lider-admin/api/mensajes.php[?q={texto}&canal={email|whatsapp}]
+ * GET /repo-admin/api/mensajes.php[?q={texto}&canal={email|whatsapp}]
  *   Lista todos los mensajes enviados a usuarios, ordenados del más reciente al más antiguo.
  */
 header('Content-Type: application/json');

@@ -2,7 +2,7 @@
 /**
  * API admin — Eventos (solo lectura)
  *
- * GET /lider-admin/api/eventos.php[?q={texto}]
+ * GET /repo-admin/api/eventos.php[?q={texto}]
  *   Lista todos los eventos registrados, ordenados del más reciente al más antiguo.
  *   Opcionalmente filtra por texto en el detalle o nombre del cliente.
  */

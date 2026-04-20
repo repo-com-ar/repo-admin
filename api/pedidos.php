@@ -2,16 +2,16 @@
 /**
  * API admin — Pedidos (CRUD + distancia)
  *
- * GET    /lider-admin/api/pedidos.php[?estado={estado}&q={texto}]
+ * GET    /repo-admin/api/pedidos.php[?estado={estado}&q={texto}]
  *   Lista pedidos con sus ítems. Filtra por estado y/o búsqueda libre
  *   (número, cliente, teléfono). Devuelve stats por estado (cantidad y monto).
  *
- * PUT    /lider-admin/api/pedidos.php
+ * PUT    /repo-admin/api/pedidos.php
  *   Cambia el estado de un pedido y recalcula distancia/tiempo vía Google Distance Matrix.
  *   Body JSON: { id, estado }
  *   Estados válidos: pendiente | preparando | listo | entregado | cancelado
  *
- * DELETE /lider-admin/api/pedidos.php?id={id}
+ * DELETE /repo-admin/api/pedidos.php?id={id}
  *   Elimina un pedido y sus ítems en una transacción.
  *
  * Helpers internos:

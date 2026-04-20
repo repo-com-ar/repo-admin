@@ -10,7 +10,7 @@ if (authUser()) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lider Admin — Iniciar sesión</title>
+  <title>Repo Admin — Iniciar sesión</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -53,7 +53,7 @@ if (authUser()) {
 </head>
 <body>
   <div class="card">
-    <div class="logo">🛒 Lider Admin</div>
+    <div class="logo">🛒 Repo Admin</div>
     <div class="subtitle">Ingresá con tu correo y contraseña</div>
 
     <div class="error-msg" id="errorMsg"></div>

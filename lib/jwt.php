@@ -3,7 +3,7 @@
  * JWT HS256 — implementación mínima sin dependencias externas.
  */
 
-define('JWT_SECRET', 'lider-admin-s3cr3t-2026-xK9mP2qN');
+define('JWT_SECRET', 'repo-admin-s3cr3t-2026-xK9mP2qN');
 define('JWT_TTL',    60 * 60 * 24 * 7); // 7 días
 
 function jwt_encode(array $payload): string {
