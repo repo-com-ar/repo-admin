@@ -11,34 +11,54 @@ if (authUser()) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Repo Admin — Iniciar sesión</title>
+  <script>(function(){var t=localStorage.getItem('adminTema')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>
+    :root {
+      --bg:      #f4f6fb;
+      --surface: #ffffff;
+      --border:  #e2e8f0;
+      --text:    #1e293b;
+      --muted:   #64748b;
+    }
+    [data-theme="dark"] {
+      --bg:      #32373D;
+      --surface: #3d4248;
+      --border:  #555b63;
+      --text:    #f0f0f0;
+      --muted:   #aaaaaa;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f1f5f9; min-height: 100vh;
+      background: var(--bg); color: var(--text); min-height: 100vh;
       display: flex; align-items: center; justify-content: center; padding: 24px;
+      transition: background .2s, color .2s;
     }
     .card {
-      background: #fff; border-radius: 16px; padding: 40px 36px;
+      background: var(--surface); border-radius: 16px; padding: 40px 36px;
       width: 100%; max-width: 380px;
       box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      border: 1px solid var(--border);
     }
-    .logo { text-align: center; font-size: 1.5rem; font-weight: 800; color: #f97316; margin-bottom: 8px; }
-    .subtitle { text-align: center; font-size: .85rem; color: #94a3b8; margin-bottom: 32px; }
+    .logo { text-align: center; margin-bottom: 8px; }
+    .logo-light { display: block; margin: 0 auto; }
+    .logo-dark  { display: none; margin: 0 auto; }
+    [data-theme="dark"] .logo-light { display: none; }
+    [data-theme="dark"] .logo-dark  { display: block; }
+    .subtitle { text-align: center; font-size: .85rem; color: var(--muted); margin-bottom: 32px; }
     .form-group { margin-bottom: 18px; }
-    label { display: block; font-size: .82rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
+    label { display: block; font-size: .82rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
     input {
-      width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px;
-      font-size: .95rem; color: #1e293b; transition: border-color .15s;
-      outline: none;
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: .95rem; color: var(--text); background: var(--surface);
+      transition: border-color .15s; outline: none;
     }
-    input:focus { border-color: #f97316; }
+    input:focus { border-color: #ff9f1c; }
     .btn {
       width: 100%; padding: 13px; border: none; border-radius: 50px; cursor: pointer;
       font-size: 1rem; font-weight: 700; letter-spacing: .01em;
-      background: linear-gradient(135deg, #f97316, #ff9f1c);
-      color: #fff; margin-top: 8px;
-      box-shadow: 0 4px 14px rgba(249,115,22,.35);
+      background: #ff9f1c; color: #fff; margin-top: 8px;
+      box-shadow: 0 4px 14px rgba(255,159,28,.35);
       transition: transform .1s, box-shadow .1s;
     }
     .btn:active { transform: scale(.97); }
@@ -53,7 +73,10 @@ if (authUser()) {
 </head>
 <body>
   <div class="card">
-    <div class="logo">🛒 Repo Admin</div>
+    <div class="logo">
+      <img class="logo-light" src="assets/img/repo_logo_black.png" alt="Repo" style="height:48px;width:auto">
+      <img class="logo-dark"  src="assets/img/repo_logo_withe.png" alt="Repo" style="height:48px;width:auto">
+    </div>
     <div class="subtitle">Ingresá con tu correo y contraseña</div>
 
     <div class="error-msg" id="errorMsg"></div>

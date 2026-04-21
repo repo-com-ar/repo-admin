@@ -426,7 +426,10 @@ const adminTema = {
 
 /* ===== Navegación de secciones ===== */
 async function cerrarSesionAdmin() {
-  await fetch('api/auth', { method: 'DELETE' });
+  try {
+    await fetch('api/auth', { method: 'DELETE', credentials: 'include' });
+  } catch (e) { /* continuar aunque falle el servidor */ }
+  document.cookie = 'repo_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax';
   window.location.href = 'login';
 }
 
