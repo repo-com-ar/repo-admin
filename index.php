@@ -1274,19 +1274,17 @@ $authUser = authUser();
       <button class="btn btn-ghost" onclick="cerrarModalUsuario()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Usuario *</label>
-          <input type="text" id="usrUsuario" placeholder="Nombre de usuario" autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label>Celular</label>
-          <input type="tel" id="usrCelular" placeholder="Ej: 11 2345-6789">
-        </div>
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" id="usrNombre" placeholder="Nombre de usuario" autocomplete="off">
       </div>
       <div class="form-group">
         <label>Correo electrónico</label>
         <input type="email" id="usrCorreo" placeholder="correo@ejemplo.com">
+      </div>
+      <div class="form-group">
+        <label>Celular</label>
+        <input type="tel" id="usrCelular" placeholder="Ej: 11 2345-6789">
       </div>
       <div class="form-group">
         <label>Contraseña</label>

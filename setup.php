@@ -9,11 +9,11 @@ $error   = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $usuario    = trim($_POST['usuario']    ?? '');
+    $nombre     = trim($_POST['nombre']     ?? '');
     $correo     = trim($_POST['correo']     ?? '');
     $contrasena = trim($_POST['contrasena'] ?? '');
 
-    if (!$usuario || !$correo || !$contrasena) {
+    if (!$nombre || !$correo || !$contrasena) {
         $error = 'Todos los campos son obligatorios.';
     } else {
         try {
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS usuarios (
                     id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                    usuario    VARCHAR(100) NOT NULL,
+                    nombre     VARCHAR(100) NOT NULL,
                     correo     VARCHAR(255) NOT NULL DEFAULT '',
                     celular    VARCHAR(50)  NOT NULL DEFAULT '',
                     contrasena VARCHAR(255) NOT NULL DEFAULT '',
@@ -34,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($count > 0) {
                 $error = 'Ya existe al menos un usuario. Eliminá este archivo por seguridad.';
             } else {
-                $stmt = $pdo->prepare("INSERT INTO usuarios (usuario, correo, contrasena) VALUES (?, ?, ?)");
-                $stmt->execute([$usuario, $correo, $contrasena]);
-                $success = "Usuario <strong>$usuario</strong> creado correctamente. <strong>Eliminá este archivo (setup.php) ahora.</strong>";
+                $stmt = $pdo->prepare("INSERT INTO usuarios (nombre, correo, contrasena) VALUES (?, ?, ?)");
+                $stmt->execute([$nombre, $correo, $contrasena]);
+                $success = "Usuario <strong>$nombre</strong> creado correctamente. <strong>Eliminá este archivo (setup.php) ahora.</strong>";
             }
         } catch (Exception $e) {
             $error = 'Error de base de datos: ' . $e->getMessage();
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php if (!$success): ?>
   <form method="POST">
     <label>Nombre de usuario</label>
-    <input type="text" name="usuario" required>
+    <input type="text" name="nombre" required>
     <label>Correo electrónico</label>
     <input type="email" name="correo" required>
     <label>Contraseña</label>

@@ -538,7 +538,7 @@ function renderUsuarios() {
     return;
   }
   lista.innerHTML = '<div class="table-card"><table class="table"><thead><tr>'
-    + '<th>#</th><th>Usuario</th><th>Correo</th><th>Celular</th><th>Contraseña</th><th>Alta</th><th></th>'
+    + '<th>#</th><th>Nombre</th><th>Correo</th><th>Celular</th><th>Contraseña</th><th>Alta</th><th></th>'
     + '</tr></thead><tbody>'
     + usuarios.map(function(u) { return renderFilaUsuario(u); }).join('')
     + '</tbody></table></div>';
@@ -548,14 +548,14 @@ function renderFilaUsuario(u) {
   var fecha = u.created_at ? new Date(u.created_at).toLocaleDateString('es-AR') : '—';
   return '<tr>'
     + '<td class="td-id">#' + u.id + '</td>'
-    + '<td><strong>' + esc(u.usuario) + '</strong></td>'
+    + '<td><strong>' + esc(u.nombre) + '</strong></td>'
     + '<td>' + esc(u.correo || '—') + '</td>'
     + '<td>' + esc(u.celular || '—') + '</td>'
     + '<td style="font-family:monospace;font-size:.82rem">' + esc(u.contrasena || '—') + '</td>'
     + '<td>' + fecha + '</td>'
     + '<td><div class="actions">'
     + '<button class="btn-icon-sm" title="Editar" onclick="abrirEditarUsuario(' + u.id + ')">✏️</button>'
-    + '<button class="btn-icon-sm btn-danger-sm" title="Eliminar" onclick="confirmarEliminarUsuario(' + u.id + ',\'' + esc(u.usuario) + '\')">🗑️</button>'
+    + '<button class="btn-icon-sm btn-danger-sm" title="Eliminar" onclick="confirmarEliminarUsuario(' + u.id + ',\'' + esc(u.nombre) + '\')">🗑️</button>'
     + '</div></td>'
     + '</tr>';
 }
@@ -563,12 +563,12 @@ function renderFilaUsuario(u) {
 function abrirNuevoUsuario() {
   usrEditandoId = null;
   document.getElementById('usrModalTitulo').textContent = 'Nuevo usuario';
-  document.getElementById('usrUsuario').value    = '';
-  document.getElementById('usrCorreo').value     = '';
-  document.getElementById('usrCelular').value    = '';
-  document.getElementById('usrContrasena').value = '';
+  document.getElementById('usrNombre').value      = '';
+  document.getElementById('usrCorreo').value      = '';
+  document.getElementById('usrCelular').value     = '';
+  document.getElementById('usrContrasena').value  = '';
   document.getElementById('usrModalBackdrop').classList.add('open');
-  document.getElementById('usrUsuario').focus();
+  document.getElementById('usrNombre').focus();
 }
 
 function abrirEditarUsuario(id) {
@@ -576,12 +576,12 @@ function abrirEditarUsuario(id) {
   if (!u) return;
   usrEditandoId = id;
   document.getElementById('usrModalTitulo').textContent = 'Editar usuario';
-  document.getElementById('usrUsuario').value    = u.usuario    || '';
-  document.getElementById('usrCorreo').value     = u.correo     || '';
-  document.getElementById('usrCelular').value    = u.celular    || '';
-  document.getElementById('usrContrasena').value = u.contrasena || '';
+  document.getElementById('usrNombre').value      = u.nombre     || '';
+  document.getElementById('usrCorreo').value      = u.correo     || '';
+  document.getElementById('usrCelular').value     = u.celular    || '';
+  document.getElementById('usrContrasena').value  = u.contrasena || '';
   document.getElementById('usrModalBackdrop').classList.add('open');
-  document.getElementById('usrUsuario').focus();
+  document.getElementById('usrNombre').focus();
 }
 
 function cerrarModalUsuario() {
@@ -589,14 +589,14 @@ function cerrarModalUsuario() {
 }
 
 async function guardarUsuario() {
-  var usuario    = document.getElementById('usrUsuario').value.trim();
+  var nombre     = document.getElementById('usrNombre').value.trim();
   var correo     = document.getElementById('usrCorreo').value.trim();
   var celular    = document.getElementById('usrCelular').value.trim();
   var contrasena = document.getElementById('usrContrasena').value.trim();
 
-  if (!usuario) { showToast('El nombre de usuario es requerido'); return; }
+  if (!nombre) { showToast('El nombre es requerido'); return; }
 
-  var body   = { usuario, correo, celular, contrasena };
+  var body   = { nombre, correo, celular, contrasena };
   var method = usrEditandoId ? 'PUT' : 'POST';
   if (usrEditandoId) body.id = usrEditandoId;
 

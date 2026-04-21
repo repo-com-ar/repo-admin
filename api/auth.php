@@ -53,15 +53,18 @@ try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS usuarios (
             id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            usuario    VARCHAR(100) NOT NULL,
+            nombre     VARCHAR(100) NOT NULL,
             correo     VARCHAR(255) NOT NULL DEFAULT '',
             celular    VARCHAR(50)  NOT NULL DEFAULT '',
             contrasena VARCHAR(255) NOT NULL DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
+    try {
+        $pdo->exec("ALTER TABLE usuarios CHANGE usuario nombre VARCHAR(100) NOT NULL");
+    } catch (Exception $e) { /* columna ya renombrada o no existe */ }
 
-    $stmt = $pdo->prepare("SELECT id, usuario, correo FROM usuarios WHERE correo = ? AND contrasena = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT id, nombre, correo FROM usuarios WHERE correo = ? AND contrasena = ? LIMIT 1");
     $stmt->execute([$correo, $contrasena]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -73,7 +76,7 @@ try {
 
     $token = jwt_encode([
         'uid' => (int)$user['id'],
-        'usr' => $user['usuario'],
+        'usr' => $user['nombre'],
         'email' => $user['correo'],
         'exp' => time() + JWT_TTL,
         'iat' => time(),
@@ -83,7 +86,7 @@ try {
 
     echo json_encode([
         'ok'      => true,
-        'usuario' => $user['usuario'],
+        'usuario' => $user['nombre'],
         'token'   => $token,
     ]);
 

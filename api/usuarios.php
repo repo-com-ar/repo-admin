@@ -6,10 +6,10 @@
  *   Lista usuarios del panel de administración.
  *
  * POST   /repo-admin/api/usuarios.php
- *   Crea un nuevo usuario. Body JSON: { usuario, correo, celular, contrasena }
+ *   Crea un nuevo usuario. Body JSON: { nombre, correo, celular, contrasena }
  *
  * PUT    /repo-admin/api/usuarios.php
- *   Actualiza un usuario. Body JSON: { id, usuario?, correo?, celular?, contrasena? }
+ *   Actualiza un usuario. Body JSON: { id, nombre?, correo?, celular?, contrasena? }
  *
  * DELETE /repo-admin/api/usuarios.php?id={id}
  *   Elimina un usuario.
@@ -42,13 +42,17 @@ try {
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS usuarios (
         id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        usuario    VARCHAR(100) NOT NULL,
+        nombre     VARCHAR(100) NOT NULL,
         correo     VARCHAR(255) NOT NULL DEFAULT '',
         celular    VARCHAR(50)  NOT NULL DEFAULT '',
         contrasena VARCHAR(255) NOT NULL DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
+// Migración: renombrar columna usuario → nombre en bases existentes
+try {
+    $pdo->exec("ALTER TABLE usuarios CHANGE usuario nombre VARCHAR(100) NOT NULL");
+} catch (Exception $e) { /* columna ya renombrada o no existe */ }
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -60,13 +64,13 @@ switch ($method) {
         $params = [];
         $where  = '';
         if ($q) {
-            $where    = 'WHERE usuario LIKE ? OR correo LIKE ? OR celular LIKE ?';
+            $where    = 'WHERE nombre LIKE ? OR correo LIKE ? OR celular LIKE ?';
             $like     = "%$q%";
             $params[] = $like;
             $params[] = $like;
             $params[] = $like;
         }
-        $stmt = $pdo->prepare("SELECT id, usuario, correo, celular, contrasena, created_at FROM usuarios $where ORDER BY id DESC LIMIT 200");
+        $stmt = $pdo->prepare("SELECT id, nombre, correo, celular, contrasena, created_at FROM usuarios $where ORDER BY id DESC LIMIT 200");
         $stmt->execute($params);
         $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -78,28 +82,28 @@ switch ($method) {
     // ---- POST: crear ----
     case 'POST':
         $body = json_decode(file_get_contents('php://input'), true);
-        $usuario   = trim($body['usuario']   ?? '');
+        $nombre    = trim($body['nombre']     ?? '');
         $correo    = trim($body['correo']     ?? '');
         $celular   = trim($body['celular']    ?? '');
         $contrasena = trim($body['contrasena'] ?? '');
 
-        if (!$usuario) {
+        if (!$nombre) {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'error' => 'El nombre de usuario es requerido']);
+            echo json_encode(['ok' => false, 'error' => 'El nombre es requerido']);
             break;
         }
 
-        // Verificar unicidad de usuario
-        $dup = $pdo->prepare("SELECT id FROM usuarios WHERE usuario = ?");
-        $dup->execute([$usuario]);
+        // Verificar unicidad de nombre
+        $dup = $pdo->prepare("SELECT id FROM usuarios WHERE nombre = ?");
+        $dup->execute([$nombre]);
         if ($dup->fetch()) {
             http_response_code(409);
-            echo json_encode(['ok' => false, 'error' => 'El usuario ya existe']);
+            echo json_encode(['ok' => false, 'error' => 'El nombre ya existe']);
             break;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO usuarios (usuario, correo, celular, contrasena) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$usuario, $correo, $celular, $contrasena]);
+        $stmt = $pdo->prepare("INSERT INTO usuarios (nombre, correo, celular, contrasena) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$nombre, $correo, $celular, $contrasena]);
         $id = (int)$pdo->lastInsertId();
 
         echo json_encode(['ok' => true, 'id' => $id]);
@@ -119,17 +123,17 @@ switch ($method) {
         $campos = [];
         $params = [];
 
-        if (isset($body['usuario']) && trim($body['usuario']) !== '') {
+        if (isset($body['nombre']) && trim($body['nombre']) !== '') {
             // Verificar unicidad excluyendo el propio registro
-            $dup = $pdo->prepare("SELECT id FROM usuarios WHERE usuario = ? AND id != ?");
-            $dup->execute([trim($body['usuario']), $id]);
+            $dup = $pdo->prepare("SELECT id FROM usuarios WHERE nombre = ? AND id != ?");
+            $dup->execute([trim($body['nombre']), $id]);
             if ($dup->fetch()) {
                 http_response_code(409);
-                echo json_encode(['ok' => false, 'error' => 'El usuario ya existe']);
+                echo json_encode(['ok' => false, 'error' => 'El nombre ya existe']);
                 break;
             }
-            $campos[] = 'usuario = ?';
-            $params[] = trim($body['usuario']);
+            $campos[] = 'nombre = ?';
+            $params[] = trim($body['nombre']);
         }
         if (isset($body['correo'])) {
             $campos[] = 'correo = ?';
