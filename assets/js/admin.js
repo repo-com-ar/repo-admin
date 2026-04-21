@@ -1926,11 +1926,12 @@ function actualizarCentroInfo() {
       miniMapa = new google.maps.Map(miniEl, {
         center: center,
         zoom: 15,
+        mapId: 'DEMO_MAP_ID',
         disableDefaultUI: true,
         gestureHandling: 'none',
         clickableIcons: false
       });
-      miniMarker = new google.maps.Marker({ position: center, map: miniMapa });
+      miniMarker = new google.maps.marker.AdvancedMarkerElement({ position: center, map: miniMapa });
     }, 100);
   } else {
     info.textContent = 'Sin ubicaci\u00f3n configurada.';
@@ -1952,19 +1953,20 @@ function abrirMapaSelector(context) {
     var activeLat2 = mapaContext === 'cliente' ? cliMapLat : mapaContext === 'proveedor' ? provMapLat : centroDistLat;
     mapaSelector = new google.maps.Map(document.getElementById('mapaSelector'), {
       center: center,
-      zoom: activeLat2 ? 16 : 12
+      zoom: activeLat2 ? 16 : 12,
+      mapId: 'DEMO_MAP_ID'
     });
 
-    mapaMarker = new google.maps.Marker({
+    mapaMarker = new google.maps.marker.AdvancedMarkerElement({
       position: center,
       map: mapaSelector,
-      draggable: true
+      gmpDraggable: true
     });
 
     actualizarCoordsTxt(defaultLat, defaultLng);
 
     mapaMarker.addListener('dragend', function() {
-      var pos = mapaMarker.getPosition();
+      var pos = mapaMarker.position;
       actualizarCoordsTxt(pos.lat(), pos.lng());
     });
 

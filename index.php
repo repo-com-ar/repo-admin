@@ -13,7 +13,7 @@ $authUser = authUser();
   <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="96x96" href="favicon/favicon-96x96.png">
   <link rel="stylesheet" href="assets/css/admin.css?v=<?= time() ?>">
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5WChZRhfb478oxJr7kUBwufoe-G_5SBg"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5WChZRhfb478oxJr7kUBwufoe-G_5SBg&loading=async&libraries=marker"></script>
 </head>
 <body>
 
@@ -70,7 +70,7 @@ $authUser = authUser();
     <div class="topbar">
       <button class="hamburger" id="menuToggle" onclick="toggleSidebar()" aria-label="Menú">&#9776;</button>
       <div class="topbar-title">Gestión de Productos</div>
-      <div class="topbar-user">
+<div class="topbar-user">
         <div class="user-menu-wrap" id="userMenuWrap">
           <button class="topbar-username" onclick="toggleUserMenu()" id="userMenuBtn">
             👤 <?= htmlspecialchars($authUser['usr'] ?? '') ?> <span class="user-menu-arrow">▾</span>
@@ -1316,10 +1316,5 @@ $authUser = authUser();
 <div class="toast" id="toast"></div>
 
 <script src="assets/js/admin.js?v=<?= time() ?>"></script>
-<script>
-  // Fecha en topbar
-  document.getElementById('topbarMeta').textContent =
-    new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-</script>
 </body>
 </html>

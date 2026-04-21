@@ -87,7 +87,7 @@ if (authUser()) {
           diag.push('❌ El navegador NO permite crear/leer cookies vía JavaScript.');
         }
         // Probar fetch con credenciales
-        fetch('api/auth.php', {
+        fetch('api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ correo: 'diagnostico', contrasena: 'diagnostico' }),
@@ -160,7 +160,7 @@ if (authUser()) {
       errEl.classList.remove('show');
 
       try {
-        var res  = await fetch('api/auth.php', {
+        var res  = await fetch('api/auth', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ correo, contrasena }),
