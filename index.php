@@ -61,6 +61,9 @@ $authUser = authUser();
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('clientes', this)" data-section="clientes">
             <span class="nav-icon">👥</span> Clientes
           </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('carritos', this)" data-section="carritos">
+            <span class="nav-icon">🛒</span> Carritos
+          </a>
         </div>
       </div>
 
@@ -447,6 +450,70 @@ $authUser = authUser();
         </div>
 
       </div><!-- /seccionClientes -->
+
+      <!-- ========== SECCIÓN CARRITOS ========== -->
+      <div class="section" id="seccionCarritos" style="display:none">
+
+        <!-- Stats carritos -->
+        <div class="stats-bar">
+          <div class="stat-card">
+            <span class="stat-label">Total carritos</span>
+            <span class="stat-value orange" id="cartStatTotal">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Activos</span>
+            <span class="stat-value" style="color:#3b82f6" id="cartStatActivos">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Abandonados</span>
+            <span class="stat-value red" id="cartStatAbandonados">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Exitosos</span>
+            <span class="stat-value green" id="cartStatExitosos">—</span>
+          </div>
+        </div>
+
+        <!-- Toolbar carritos -->
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar cliente..." oninput="onSearchCarrito(this.value)">
+            <select id="filterEstadoCarrito" onchange="onFiltroEstadoCarrito(this.value)">
+              <option value="todos">Todos los estados</option>
+              <option value="activo">🟢 Activo</option>
+              <option value="abandonado">🔴 Abandonado</option>
+              <option value="exitoso">✅ Exitoso</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="cargarCarritos()">🔄 Actualizar</button>
+          </div>
+        </div>
+
+        <!-- Tabla de carritos -->
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Cliente</th>
+                <th>Sesión</th>
+                <th>Productos</th>
+                <th>Unidades</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Última actividad</th>
+                <th>Inactivo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="carritosTbody">
+              <tr class="spinner-row"><td colspan="10"><div class="spin"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /seccionCarritos -->
 
       <!-- ========== SECCIÓN PROVEEDORES ========== -->
       <div class="section" id="seccionProveedores" style="display:none">
@@ -1400,6 +1467,54 @@ $authUser = authUser();
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModalUsuario()">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Detalle Carrito ===== -->
+<div class="modal-backdrop" id="cartDetalleBackdrop" onclick="if(event.target===this)cerrarDetalleCarrito()">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="cartDetalleTitle">Carrito #—</div>
+        <div style="font-size:.78rem;color:var(--muted)" id="cartDetalleFecha"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="cerrarDetalleCarrito()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      <!-- Info cliente -->
+      <div id="cartDetalleCliente" style="display:flex;gap:12px;flex-wrap:wrap"></div>
+      <!-- Estado -->
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:.85rem;color:var(--muted)">Estado:</span>
+        <span id="cartDetalleEstadoBadge"></span>
+        <select id="cartDetalleEstadoSel" onchange="cambiarEstadoCarrito()" style="margin-left:8px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem">
+          <option value="activo">🟢 Activo</option>
+          <option value="abandonado">🔴 Abandonado</option>
+          <option value="exitoso">✅ Exitoso</option>
+        </select>
+      </div>
+      <!-- Items -->
+      <div class="table-card" style="margin:0;max-height:320px;overflow-y:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th style="text-align:center">Precio</th>
+              <th style="text-align:center">Cant.</th>
+              <th style="text-align:right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody id="cartDetalleItems"></tbody>
+        </table>
+      </div>
+      <!-- Total -->
+      <div style="text-align:right;font-weight:700;font-size:1rem" id="cartDetalleTotal"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cartRecordatorioBtn" onclick="enviarRecordatorioCarrito()" style="margin-right:auto">📩 Enviar recordatorio</button>
+      <button class="btn btn-danger" onclick="confirmarEliminarCarrito(cartDetalleActual?.id)">🗑️ Eliminar</button>
+      <button class="btn btn-ghost" onclick="cerrarDetalleCarrito()">Cerrar</button>
     </div>
   </div>
 </div>

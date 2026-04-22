@@ -22,6 +22,7 @@ const CFG_API = 'api/configuracion';
 const CLI_API = 'api/clientes';
 const PROV_API = 'api/proveedores';
 const COMP_API = 'api/compras';
+const CART_API = 'api/carritos';
 
 let CATEGORIAS = [];
 let PROVEEDORES = [];
@@ -483,7 +484,7 @@ function toggleNavGroup(wrapId) {
 // Secciones que pertenecen a cada grupo colapsable
 const NAV_GROUPS = {
   navGroupProductos: ['productos', 'categorias', 'inventarios'],
-  navGroupVentas:    ['pedidos', 'clientes'],
+  navGroupVentas:    ['pedidos', 'clientes', 'carritos'],
   navGroupCompras:   ['compras', 'proveedores'],
   navGroupAdmin:     ['eventos', 'usuarios', 'config'],
 };
@@ -557,6 +558,10 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionInventarios').style.display = '';
     topbar.textContent = 'Gestión de Inventarios';
     cargarInventarios();
+  } else if (seccion === 'carritos') {
+    document.getElementById('seccionCarritos').style.display = '';
+    topbar.textContent = 'Gestión de Carritos';
+    cargarCarritos();
   }
 }
 
@@ -2465,6 +2470,239 @@ async function cargarFechasSistema() {
   }
 }
 
+/* ===== Carritos ===== */
+let carritosList        = [];
+let filtroEstadoCarrito = 'todos';
+let filtroBusquedaCarrito = '';
+let cartSearchTimer     = null;
+let cartDetalleActual   = null;
+
+async function cargarCarritos() {
+  document.getElementById('carritosTbody').innerHTML =
+    `<tr class="spinner-row"><td colspan="8"><div class="spin"></div></td></tr>`;
+  try {
+    const qs  = new URLSearchParams({ estado: filtroEstadoCarrito, q: filtroBusquedaCarrito }).toString();
+    const res = await fetch(`${CART_API}?${qs}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    carritosList = data.data || [];
+    renderCarritos();
+    renderStatsCarritos(data.stats);
+  } catch (e) {
+    document.getElementById('carritosTbody').innerHTML =
+      `<tr><td colspan="8" class="table-empty">Error al cargar carritos</td></tr>`;
+  }
+}
+
+function renderStatsCarritos(stats) {
+  if (!stats) return;
+  document.getElementById('cartStatTotal').textContent      = stats.total      ?? '—';
+  document.getElementById('cartStatActivos').textContent    = stats.activos    ?? '—';
+  document.getElementById('cartStatAbandonados').textContent = stats.abandonados ?? '—';
+  document.getElementById('cartStatExitosos').textContent   = stats.exitosos   ?? '—';
+}
+
+function renderCarritos() {
+  const tbody = document.getElementById('carritosTbody');
+  if (!carritosList.length) {
+    tbody.innerHTML = `<tr><td colspan="10" class="table-empty">Sin carritos para los filtros aplicados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = carritosList.map(c => {
+    const cliente     = c.cliente_nombre ? esc(c.cliente_nombre) : '<span style="color:var(--muted)">Sin cuenta</span>';
+    const estadoBadge = cartEstadoBadge(c.estado);
+    const fecha       = new Date(c.updated_at).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const inactivo    = cartTiempoInactivo(Number(c.minutos_inactivo));
+    const total       = '$' + Number(c.total).toLocaleString('es-AR', { minimumFractionDigits: 2 });
+    const showReminder = c.estado === 'abandonado' || c.estado === 'activo';
+    const sesionBadge = cartSesionBadge(c.session_id);
+    return `<tr>
+      <td class="td-id">#${c.id}</td>
+      <td>${cliente}</td>
+      <td style="text-align:center">${sesionBadge}</td>
+      <td style="text-align:center">${c.items_count}</td>
+      <td style="text-align:center">${c.unidades_total}</td>
+      <td>${total}</td>
+      <td>${estadoBadge}</td>
+      <td style="font-size:.82rem;color:var(--muted)">${fecha}</td>
+      <td style="font-size:.82rem;color:var(--muted)">${inactivo}</td>
+      <td>
+        <div class="actions">
+          <button class="btn-icon-sm" title="Ver detalle" onclick="abrirDetalleCarrito(${c.id})">🔍</button>
+          <button class="btn-icon-sm" title="Eliminar carrito" onclick="confirmarEliminarCarrito(${c.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function cartSesionBadge(sessionId) {
+  if (!sessionId) return '<span style="color:var(--muted);font-size:.8rem">—</span>';
+  const short = sessionId.slice(0, 8).toUpperCase();
+  return `<span class="badge" style="background:var(--surface2);color:var(--muted);font-family:monospace;font-size:.75rem" title="${esc(sessionId)}">${short}</span>`;
+}
+
+function cartEstadoBadge(estado) {
+  const map = {
+    activo:     '<span class="badge" style="background:rgba(59,130,246,.15);color:#3b82f6">🟢 Activo</span>',
+    abandonado: '<span class="badge badge-red">🔴 Abandonado</span>',
+    exitoso:    '<span class="badge badge-stock">✅ Exitoso</span>',
+  };
+  return map[estado] || `<span class="badge">${esc(estado)}</span>`;
+}
+
+function cartTiempoInactivo(minutos) {
+  if (!minutos && minutos !== 0) return '—';
+  if (minutos < 60)   return minutos + ' min';
+  if (minutos < 1440) return Math.floor(minutos / 60) + ' h';
+  return Math.floor(minutos / 1440) + ' días';
+}
+
+async function abrirDetalleCarrito(id, autoRecordatorio = false) {
+  document.getElementById('cartDetalleBackdrop').classList.add('open');
+  document.getElementById('cartDetalleTitle').textContent  = `Carrito #${id}`;
+  document.getElementById('cartDetalleFecha').textContent  = '';
+  document.getElementById('cartDetalleCliente').innerHTML  = '<div class="spin"></div>';
+  document.getElementById('cartDetalleItems').innerHTML    = '<tr><td colspan="4" style="text-align:center;padding:20px"><div class="spin"></div></td></tr>';
+  document.getElementById('cartDetalleTotal').textContent  = '';
+
+  try {
+    const res  = await fetch(`${CART_API}?id=${id}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    const c = data.data;
+    cartDetalleActual = c;
+
+    document.getElementById('cartDetalleTitle').textContent = `Carrito #${c.id}`;
+    document.getElementById('cartDetalleFecha').innerHTML =
+      'Creado: ' + new Date(c.created_at).toLocaleString('es-AR') +
+      (c.session_id ? `&nbsp;&nbsp;${cartSesionBadge(c.session_id)}` : '');
+
+    const cli = c.cliente_nombre
+      ? `<span class="badge badge-cat">${esc(c.cliente_nombre)}</span>
+         ${c.cliente_correo ? `<span class="badge" style="background:var(--surface2)">${esc(c.cliente_correo)}</span>` : ''}
+         ${c.cliente_celular ? `<span class="badge" style="background:var(--surface2)">${esc(c.cliente_celular)}</span>` : ''}`
+      : `<span style="color:var(--muted);font-size:.9rem">Cliente no registrado</span>`;
+    document.getElementById('cartDetalleCliente').innerHTML = cli;
+
+    document.getElementById('cartDetalleEstadoBadge').innerHTML = cartEstadoBadge(c.estado);
+    const sel = document.getElementById('cartDetalleEstadoSel');
+    sel.value = c.estado;
+
+    const items = c.items || [];
+    if (!items.length) {
+      document.getElementById('cartDetalleItems').innerHTML =
+        '<tr><td colspan="4" class="table-empty">Sin productos</td></tr>';
+    } else {
+      document.getElementById('cartDetalleItems').innerHTML = items.map(it => {
+        const sub = Number(it.precio) * Number(it.cantidad);
+        return `<tr>
+          <td>${esc(it.nombre)}</td>
+          <td style="text-align:center">$${Number(it.precio).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+          <td style="text-align:center">${it.cantidad}</td>
+          <td style="text-align:right">$${sub.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    document.getElementById('cartDetalleTotal').textContent =
+      'Total: $' + Number(c.total).toLocaleString('es-AR', { minimumFractionDigits: 2 });
+
+    const btnRec = document.getElementById('cartRecordatorioBtn');
+    const canRemind = (c.estado === 'activo' || c.estado === 'abandonado') &&
+                      (c.cliente_correo || c.cliente_celular);
+    btnRec.style.display = canRemind ? '' : 'none';
+
+    if (autoRecordatorio && canRemind) enviarRecordatorioCarrito();
+
+  } catch (e) {
+    document.getElementById('cartDetalleCliente').innerHTML =
+      `<span style="color:var(--danger)">Error al cargar: ${esc(e.message)}</span>`;
+  }
+}
+
+function cerrarDetalleCarrito() {
+  document.getElementById('cartDetalleBackdrop').classList.remove('open');
+  cartDetalleActual = null;
+}
+
+async function cambiarEstadoCarrito() {
+  if (!cartDetalleActual) return;
+  const estado = document.getElementById('cartDetalleEstadoSel').value;
+  try {
+    const res  = await fetch(CART_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: cartDetalleActual.id, estado }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    cartDetalleActual.estado = estado;
+    document.getElementById('cartDetalleEstadoBadge').innerHTML = cartEstadoBadge(estado);
+    showToast('Estado actualizado');
+    cargarCarritos();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function enviarRecordatorioCarrito() {
+  if (!cartDetalleActual) return;
+  const c = cartDetalleActual;
+  const canal = c.cliente_celular ? 'whatsapp' : 'email';
+  const destino = canal === 'whatsapp' ? c.cliente_celular : c.cliente_correo;
+  const nombre  = c.cliente_nombre || 'cliente';
+  const cuerpo  = `Hola ${nombre}! 👋 Tenés productos esperándote en tu carrito. ¡No te olvides de completar tu compra!\n\n👉 https://app.repo.com.ar/carrito`;
+  const btn = document.getElementById('cartRecordatorioBtn');
+  btn.textContent = 'Enviando...';
+  btn.disabled    = true;
+  try {
+    const res  = await fetch('api/enviar_mensaje', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ canal, destinatario: nombre, destino, asunto: 'Tu carrito te espera', cuerpo }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Error al enviar');
+    showToast('Recordatorio enviado por ' + canal);
+  } catch (e) {
+    showToast('Error al enviar: ' + e.message, 'error');
+  } finally {
+    btn.textContent = '📩 Enviar recordatorio';
+    btn.disabled    = false;
+  }
+}
+
+function confirmarEliminarCarrito(id) {
+  if (!id) return;
+  document.getElementById('confirmMsg').textContent = `¿Eliminás el carrito #${id}? Esta acción no se puede deshacer.`;
+  confirmCallback = async () => {
+    const res = await fetch(`${CART_API}?id=${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      cerrarDetalleCarrito();
+      showToast('Carrito eliminado');
+      cargarCarritos();
+    } else {
+      showToast('Error al eliminar', 'error');
+    }
+  };
+  document.getElementById('confirmBackdrop').classList.add('open');
+}
+
+function onSearchCarrito(val) {
+  clearTimeout(cartSearchTimer);
+  cartSearchTimer = setTimeout(() => {
+    filtroBusquedaCarrito = val.trim();
+    cargarCarritos();
+  }, 300);
+}
+
+function onFiltroEstadoCarrito(val) {
+  filtroEstadoCarrito = val;
+  cargarCarritos();
+}
+
 /* ===== Init ===== */
 document.addEventListener('DOMContentLoaded', async () => {
   adminTema.init();
@@ -2476,6 +2714,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // cerrar modal con Escape
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { cerrarModal(); catModal.cerrar(); cerrarPedModal(); cerrarMapaSelector(); cerrarConfirm(false); cerrarMsgModal(); cerrarDetalleMensaje(); cerrarDetalleCliente(); cerrarDetalleProducto(); cerrarDetalleProveedor(); cerrarDetalleEvento(); cerrarModalUsuario(); }
+    if (e.key === 'Escape') { cerrarModal(); catModal.cerrar(); cerrarPedModal(); cerrarMapaSelector(); cerrarConfirm(false); cerrarMsgModal(); cerrarDetalleMensaje(); cerrarDetalleCliente(); cerrarDetalleProducto(); cerrarDetalleProveedor(); cerrarDetalleEvento(); cerrarModalUsuario(); cerrarDetalleCarrito(); }
   });
 });
