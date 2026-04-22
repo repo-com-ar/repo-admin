@@ -24,6 +24,7 @@ const PROV_API = 'api/proveedores';
 const COMP_API = 'api/compras';
 
 let CATEGORIAS = [];
+let PROVEEDORES = [];
 
 const UNIDADES = ['kg', 'u', 'lt', 'g', 'docena', 'pack'];
 
@@ -41,6 +42,13 @@ async function cargarCategorias() {
     const data = await res.json();
     if (data.ok) CATEGORIAS = data.data;
   } catch (e) { console.error('Error cargando categorías', e); }
+}
+async function cargarProveedoresLista() {
+  try {
+    const res = await fetch(PROV_API);
+    const data = await res.json();
+    if (data.ok) PROVEEDORES = data.data || [];
+  } catch (e) { console.error('Error cargando proveedores', e); }
 }
 async function apiGet(params = {}) {
   const qs = new URLSearchParams(params).toString();
@@ -172,6 +180,11 @@ function poblarSelects() {
   const selFil = document.getElementById('filterCat');
   selFil.innerHTML = `<option value="todos">Todas las categorías</option>` +
     CATEGORIAS.map(c => `<option value="${c.id}">${c.emoji} ${c.label}</option>`).join('');
+
+  // proveedor
+  const selProv = document.getElementById('fProveedor');
+  selProv.innerHTML = '<option value="">— Sin proveedor —</option>' +
+    PROVEEDORES.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
 }
 
 /* ===== Modal: abrir / cerrar ===== */
@@ -201,6 +214,7 @@ function abrirEditar(id) {
   document.getElementById('fStockComprometido').value = p.stock_comprometido ?? 0;
   document.getElementById('fStockMinimo').value       = p.stock_minimo ?? 0;
   document.getElementById('fStockRecomendado').value  = p.stock_recomendado ?? 3;
+  document.getElementById('fProveedor').value  = p.proveedor_id ?? '';
   actualizarPreview();
   document.getElementById('modalBackdrop').classList.add('open');
 }
@@ -217,6 +231,7 @@ function limpiarForm() {
   document.getElementById('fStockComprometido').value = 0;
   document.getElementById('fStockMinimo').value       = 0;
   document.getElementById('fStockRecomendado').value  = 3;
+  document.getElementById('fProveedor').value  = '';
   document.getElementById('fArchivo').value   = '';
   actualizarPreview();
 }
@@ -245,7 +260,6 @@ function actualizarPreview() {
   const preview = document.getElementById('uploadPreview');
   const controls = document.getElementById('uploadControls');
   if (url) {
-    img.src = url;
     img.onload = () => {
       preview.classList.add('visible');
       controls.classList.add('has-image');
@@ -254,6 +268,7 @@ function actualizarPreview() {
       preview.classList.remove('visible');
       controls.classList.remove('has-image');
     };
+    img.src = url;
   } else {
     preview.classList.remove('visible');
     controls.classList.remove('has-image');
@@ -346,11 +361,12 @@ async function guardarProducto() {
   const stock_comprometido = parseInt(document.getElementById('fStockComprometido').value) || 0;
   const stock_minimo       = parseInt(document.getElementById('fStockMinimo').value) || 0;
   const stock_recomendado  = parseInt(document.getElementById('fStockRecomendado').value) || 3;
+  const proveedor_id       = parseInt(document.getElementById('fProveedor').value) || null;
 
   if (!nombre) { showToast('El nombre es obligatorio', true); return; }
   if (isNaN(precio_venta) || precio_venta < 0) { showToast('Precio de venta inválido', true); return; }
 
-  const body = { nombre, precio_compra, margen, precio_venta, categoria, sku, ean, contenido, unidad, imagen, stock_actual, stock_comprometido, stock_minimo, stock_recomendado };
+  const body = { nombre, precio_compra, margen, precio_venta, categoria, sku, ean, contenido, unidad, imagen, stock_actual, stock_comprometido, stock_minimo, stock_recomendado, proveedor_id };
   let res;
   if (editandoId) {
     body.id = editandoId;
@@ -2222,12 +2238,14 @@ async function cargarDashboard() {
       return `<tr ${rowStyle} onclick="irDetalle('mensajes',${m.id})"><td>${canal} ${m.canal}</td><td>${esc(m.destino || m.destinatario)}</td><td><span class="badge ${estadoClass}">${m.estado}</span></td></tr>`;
     }).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Sin mensajes</td></tr>';
 
-    // Stock crítico (stock_actual <= 3)
+    // STOP crítico: productos con stock_actual < stock_minimo
     const stBody = document.getElementById('dashStockBody');
-    const criticos = (rProd.data || []).filter(p => p.stock && p.stock_actual <= 3).slice(0, 8);
-    stBody.innerHTML = criticos.length ? criticos.map(p =>
-      `<tr ${rowStyle} onclick="irDetalle('productos',${p.id})"><td>${esc(p.nombre)}</td><td><span class="badge ${p.stock_actual === 0 ? 'badge-red' : 'badge-warn'}">${p.stock_actual}</span></td></tr>`
-    ).join('') : '<tr><td colspan="2" style="text-align:center;color:var(--muted);padding:16px">Sin stock crítico</td></tr>';
+    const criticos = (rProd.data || []).filter(p => p.stock_minimo > 0 && p.stock_actual < p.stock_minimo);
+    stBody.innerHTML = criticos.length ? criticos.map(p => {
+      const aComprar = Math.max(0, (p.stock_recomendado ?? 0) - p.stock_actual);
+      const prov = p.proveedor_id ? (PROVEEDORES.find(v => v.id === p.proveedor_id)?.nombre ?? '—') : '—';
+      return `<tr ${rowStyle} onclick="irDetalle('productos',${p.id})"><td>${esc(p.nombre)}</td><td><span class="badge ${p.stock_actual === 0 ? 'badge-red' : 'badge-warn'}">${p.stock_actual}</span></td><td><strong>${aComprar}</strong></td><td>${esc(prov)}</td></tr>`;
+    }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin stock crítico</td></tr>';
 
   } catch(e) {
     console.error('Dashboard error:', e);
@@ -2252,7 +2270,7 @@ async function cargarFechasSistema() {
 /* ===== Init ===== */
 document.addEventListener('DOMContentLoaded', async () => {
   adminTema.init();
-  await cargarCategorias();
+  await Promise.all([cargarCategorias(), cargarProveedoresLista()]);
   poblarSelects();
   cargarDashboard();
   initDragDrop();

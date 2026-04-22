@@ -37,6 +37,7 @@ function normalizarProducto(array $p): array {
     $p['stock_comprometido'] = (int)($p['stock_comprometido'] ?? 0);
     $p['stock_minimo']       = (int)($p['stock_minimo'] ?? 0);
     $p['stock_recomendado']  = (int)($p['stock_recomendado'] ?? 3);
+    $p['proveedor_id']       = isset($p['proveedor_id']) && $p['proveedor_id'] !== null ? (int)$p['proveedor_id'] : null;
     $p['stock'] = $p['stock_actual'] > 0;
     if (!empty($p['imagen']) && strpos($p['imagen'], 'http') !== 0) {
         $p['imagen'] = 'https://media.repo.com.ar/productos/' . basename($p['imagen']);
@@ -107,10 +108,11 @@ switch ($method) {
         $stock_comprometido = (int)($body['stock_comprometido'] ?? 0);
         $stock_minimo       = (int)($body['stock_minimo'] ?? 0);
         $stock_recomendado  = (int)($body['stock_recomendado'] ?? 3);
+        $proveedor_id       = !empty($body['proveedor_id']) ? (int)$body['proveedor_id'] : null;
 
         $stmt = $pdo->prepare("
-            INSERT INTO productos (sku, ean, nombre, precio_compra, margen, precio_venta, categoria, imagen, contenido, unidad, stock_actual, stock_comprometido, stock_minimo, stock_recomendado)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO productos (sku, ean, nombre, precio_compra, margen, precio_venta, categoria, imagen, contenido, unidad, stock_actual, stock_comprometido, stock_minimo, stock_recomendado, proveedor_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $sku,
@@ -127,6 +129,7 @@ switch ($method) {
             $stock_comprometido,
             $stock_minimo,
             $stock_recomendado,
+            $proveedor_id,
         ]);
 
         $nuevoId = (int)$pdo->lastInsertId();
@@ -148,6 +151,7 @@ switch ($method) {
             'stock_comprometido' => $stock_comprometido,
             'stock_minimo'       => $stock_minimo,
             'stock_recomendado'  => $stock_recomendado,
+            'proveedor_id'       => $proveedor_id,
         ];
 
         echo json_encode(['ok' => true, 'data' => $nuevo]);
@@ -189,16 +193,19 @@ switch ($method) {
         $stock_comprometido = isset($body['stock_comprometido']) ? (int)$body['stock_comprometido'] : (int)($actual['stock_comprometido'] ?? 0);
         $stock_minimo       = isset($body['stock_minimo'])       ? (int)$body['stock_minimo']       : (int)($actual['stock_minimo'] ?? 0);
         $stock_recomendado  = isset($body['stock_recomendado'])  ? (int)$body['stock_recomendado']  : (int)($actual['stock_recomendado'] ?? 3);
+        $proveedor_id       = array_key_exists('proveedor_id', $body)
+            ? (!empty($body['proveedor_id']) ? (int)$body['proveedor_id'] : null)
+            : (isset($actual['proveedor_id']) ? (int)$actual['proveedor_id'] : null);
 
         $stmt = $pdo->prepare("
             UPDATE productos
             SET nombre=?, precio_compra=?, margen=?, precio_venta=?, categoria=?, sku=?, ean=?, contenido=?, imagen=?, unidad=?,
-                stock_actual=?, stock_comprometido=?, stock_minimo=?, stock_recomendado=?
+                stock_actual=?, stock_comprometido=?, stock_minimo=?, stock_recomendado=?, proveedor_id=?
             WHERE id=?
         ");
         $stmt->execute([
             $nombre, $precio_compra, $margen, $precio_venta, $categoria, $sku, $ean, $contenido, $imagen, $unidad,
-            $stock_actual, $stock_comprometido, $stock_minimo, $stock_recomendado,
+            $stock_actual, $stock_comprometido, $stock_minimo, $stock_recomendado, $proveedor_id,
             $id,
         ]);
 
@@ -212,6 +219,7 @@ switch ($method) {
             'stock_comprometido' => $stock_comprometido,
             'stock_minimo'       => $stock_minimo,
             'stock_recomendado'  => $stock_recomendado,
+            'proveedor_id'       => $proveedor_id,
         ];
 
         echo json_encode(['ok' => true, 'data' => $actualizado]);

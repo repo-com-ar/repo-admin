@@ -132,8 +132,8 @@ $authUser = authUser();
           <div class="table-card">
             <div class="dash-table-header dash-link" onclick="irSeccion('productos')">⚠️ Stock crítico <span class="dash-ver-mas">Ver productos →</span></div>
             <table>
-              <thead><tr><th>Producto</th><th>Stock</th></tr></thead>
-              <tbody id="dashStockBody"><tr><td colspan="2" style="text-align:center;padding:20px"><div class="spin"></div></td></tr></tbody>
+              <thead><tr><th>Producto</th><th>Actual</th><th>A comprar</th><th>Proveedor</th></tr></thead>
+              <tbody id="dashStockBody"><tr><td colspan="4" style="text-align:center;padding:20px"><div class="spin"></div></td></tr></tbody>
             </table>
           </div>
 
@@ -697,8 +697,24 @@ $authUser = authUser();
       </div>
 
       <div class="form-group">
+        <label>Categoría *</label>
+        <select id="fCategoria"><!-- poblado por JS --></select>
+      </div>
+
+      <div class="form-group">
         <label>Nombre *</label>
         <input type="text" id="fNombre" placeholder="Ej: Manzana Roja">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Contenido</label>
+          <input type="text" id="fContenido" placeholder="Ej: 500g, 1kg, 2L">
+        </div>
+        <div class="form-group">
+          <label>Unidad *</label>
+          <select id="fUnidad"><!-- poblado por JS --></select>
+        </div>
       </div>
 
       <div class="form-row form-row-3">
@@ -713,21 +729,6 @@ $authUser = authUser();
         <div class="form-group">
           <label>P. Venta *</label>
           <input type="number" id="fPrecioVenta" placeholder="0" min="0" step="0.01" oninput="calcularMargen()">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Categoría *</label>
-          <select id="fCategoria"><!-- poblado por JS --></select>
-        </div>
-        <div class="form-group">
-          <label>Contenido</label>
-          <input type="text" id="fContenido" placeholder="Ej: 500g, 1kg, 2L">
-        </div>
-        <div class="form-group">
-          <label>Unidad *</label>
-          <select id="fUnidad"><!-- poblado por JS --></select>
         </div>
       </div>
 
@@ -748,6 +749,13 @@ $authUser = authUser();
           <label>Stock recomendado</label>
           <input type="number" id="fStockRecomendado" value="3" min="0" step="1">
         </div>
+      </div>
+
+      <div class="form-group">
+        <label>Proveedor</label>
+        <select id="fProveedor">
+          <option value="">— Sin proveedor —</option>
+        </select>
       </div>
 
       <div class="form-group">
