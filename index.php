@@ -1040,6 +1040,14 @@ $authUser = authUser();
         <div id="pedDetUbicacion" style="font-size:.85rem;display:none"><a id="pedDetMapLink" href="#" target="_blank" style="color:var(--primary);font-weight:600;text-decoration:none">📍 Ver en Google Maps</a></div>
         <div id="pedDetNotas" style="font-size:.85rem;color:var(--muted);font-style:italic;display:none"></div>
       </div>
+      <!-- Repartidor -->
+      <div class="ped-detail-section" id="pedDetRepSection">
+        <div class="ped-detail-label">Repartidor</div>
+        <div id="pedDetRepartidor" style="font-size:.9rem;display:flex;align-items:center;gap:6px">
+          <span style="font-size:1rem">🛵</span>
+          <span id="pedDetRepNombre" style="font-weight:600"></span>
+        </div>
+      </div>
       <!-- Items -->
       <div class="ped-detail-section">
         <div class="ped-detail-label">Productos</div>

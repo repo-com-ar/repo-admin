@@ -1097,6 +1097,7 @@ function renderPedidos() {
           '<span class="ped-card-total">$' + Number(p.total).toLocaleString('es-AR') + '</span>' +
           '<span class="ped-card-fecha">' + fecha + '</span>' +
         '</div>' +
+        '<div class="ped-card-rep' + (p.repartidor_nombre ? '' : ' ped-card-rep--none') + '">🛵 ' + (p.repartidor_nombre ? esc(p.repartidor_nombre) : 'Sin asignar') + '</div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -1137,6 +1138,19 @@ function abrirPedido(id) {
     notasEl.style.display = '';
   } else {
     notasEl.style.display = 'none';
+  }
+
+  var repSection = document.getElementById('pedDetRepSection');
+  var repNombre  = document.getElementById('pedDetRepNombre');
+  repSection.style.display = '';
+  if (pedidoActual.repartidor_nombre) {
+    repNombre.textContent    = pedidoActual.repartidor_nombre;
+    repNombre.style.color    = '';
+    repNombre.style.fontStyle = '';
+  } else {
+    repNombre.textContent    = 'Sin asignar';
+    repNombre.style.color    = 'var(--muted)';
+    repNombre.style.fontStyle = 'italic';
   }
 
   // Items

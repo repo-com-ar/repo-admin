@@ -466,6 +466,12 @@ tbody tr:hover { background: var(--row-hover); }
   display: flex; align-items: center; gap: 16px; font-size: .82rem;
   border-top: 1px solid var(--border); padding-top: 8px;
 }
+.ped-card-rep {
+  font-size: .78rem; color: var(--success); font-weight: 600; padding-top: 6px;
+}
+.ped-card-rep--none {
+  color: var(--muted); font-weight: 400; font-style: italic;
+}
 .ped-card-items { color: var(--muted); }
 .ped-card-total { font-weight: 700; color: var(--text); }
 .ped-card-fecha { color: var(--muted); margin-left: auto; font-size: .78rem; }

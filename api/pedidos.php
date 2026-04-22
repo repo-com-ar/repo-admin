@@ -18,8 +18,8 @@
  *   calcDistanciaYTiempo() — llama a Google Distance Matrix API para obtener km y minutos
  *   calcularDistanciaPedido() — actualiza distancia_km y tiempo_min en la fila del pedido
  */
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+ini_set('display_errors', 0);
+error_reporting(0);
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -40,6 +40,13 @@ try {
     http_response_code(500);
     echo json_encode(['ok' => false, 'error' => 'DB: ' . $e->getMessage()]);
     exit;
+}
+
+// Migración inline: agregar repartidor_id si no existe
+try {
+    $pdo->query("SELECT repartidor_id FROM pedidos LIMIT 1");
+} catch (Exception $e) {
+    $pdo->exec("ALTER TABLE pedidos ADD COLUMN repartidor_id INT UNSIGNED DEFAULT NULL AFTER cliente_id");
 }
 
 function calcDistanciaYTiempo($lat1, $lng1, $lat2, $lng2) {
@@ -111,8 +118,11 @@ switch ($method) {
             $params[] = $like;
         }
 
-        $sql = "SELECT p.id, p.numero, p.cliente, p.correo, p.celular, p.direccion, p.notas, p.total, p.estado, p.lat, p.lng, p.distancia_km, p.tiempo_min, p.created_at as fecha
-                FROM pedidos p"
+        $sql = "SELECT p.id, p.numero, p.cliente, p.correo, p.celular, p.direccion, p.notas, p.total, p.estado,
+                       p.lat, p.lng, p.distancia_km, p.tiempo_min, p.created_at as fecha,
+                       p.repartidor_id, r.nombre AS repartidor_nombre
+                FROM pedidos p
+                LEFT JOIN repartidores r ON r.id = p.repartidor_id"
              . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '')
              . " ORDER BY p.id DESC LIMIT 100";
 
