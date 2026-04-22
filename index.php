@@ -30,36 +30,74 @@ $authUser = authUser();
       <a class="nav-item active" href="#" onclick="cambiarSeccion('inicio', this)" data-section="inicio">
         <span class="nav-icon">🏠</span> Inicio
       </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('productos', this)" data-section="productos">
-        <span class="nav-icon">📦</span> Productos
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('categorias', this)" data-section="categorias">
-        <span class="nav-icon">🏷️</span> Categorías
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('pedidos', this)" data-section="pedidos">
-        <span class="nav-icon">📋</span> Pedidos
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('clientes', this)" data-section="clientes">
-        <span class="nav-icon">👥</span> Clientes
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('compras', this)" data-section="compras">
-        <span class="nav-icon">🛍️</span> Compras
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('proveedores', this)" data-section="proveedores">
-        <span class="nav-icon">🏭</span> Proveedores
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('mensajes', this)" data-section="mensajes">
-        <span class="nav-icon">💬</span> Mensajes
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('eventos', this)" data-section="eventos">
-        <span class="nav-icon">📝</span> Eventos
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('usuarios', this)" data-section="usuarios">
-        <span class="nav-icon">👤</span> Usuarios
-      </a>
-      <a class="nav-item" href="#" onclick="cambiarSeccion('config', this)" data-section="config">
-        <span class="nav-icon">⚙️</span> Configuración
-      </a>
+
+      <div class="nav-group-wrap open" id="navGroupProductos">
+        <a class="nav-item nav-group-toggle" href="#" onclick="toggleNavGroup('navGroupProductos');return false;">
+          <span class="nav-icon">📦</span> Productos
+          <span class="nav-group-arrow">+</span>
+        </a>
+        <div class="nav-sub">
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('productos', this)" data-section="productos">
+            <span class="nav-icon">📦</span> Productos
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('categorias', this)" data-section="categorias">
+            <span class="nav-icon">🏷️</span> Categorías
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('inventarios', this)" data-section="inventarios">
+            <span class="nav-icon">📊</span> Inventarios
+          </a>
+        </div>
+      </div>
+
+      <div class="nav-group-wrap open" id="navGroupVentas">
+        <a class="nav-item nav-group-toggle" href="#" onclick="toggleNavGroup('navGroupVentas');return false;">
+          <span class="nav-icon">💰</span> Ventas
+          <span class="nav-group-arrow">+</span>
+        </a>
+        <div class="nav-sub">
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('pedidos', this)" data-section="pedidos">
+            <span class="nav-icon">📋</span> Pedidos
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('clientes', this)" data-section="clientes">
+            <span class="nav-icon">👥</span> Clientes
+          </a>
+        </div>
+      </div>
+
+      <div class="nav-group-wrap open" id="navGroupCompras">
+        <a class="nav-item nav-group-toggle" href="#" onclick="toggleNavGroup('navGroupCompras');return false;">
+          <span class="nav-icon">🛍️</span> Compras
+          <span class="nav-group-arrow">+</span>
+        </a>
+        <div class="nav-sub">
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('compras', this)" data-section="compras">
+            <span class="nav-icon">🛍️</span> Compras
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('proveedores', this)" data-section="proveedores">
+            <span class="nav-icon">🏭</span> Proveedores
+          </a>
+        </div>
+      </div>
+      <div class="nav-group-wrap open" id="navGroupAdmin">
+        <a class="nav-item nav-group-toggle" href="#" onclick="toggleNavGroup('navGroupAdmin');return false;">
+          <span class="nav-icon">⚙️</span> Administración
+          <span class="nav-group-arrow">+</span>
+        </a>
+        <div class="nav-sub">
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('mensajes', this)" data-section="mensajes">
+            <span class="nav-icon">💬</span> Mensajes
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('eventos', this)" data-section="eventos">
+            <span class="nav-icon">📝</span> Eventos
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('usuarios', this)" data-section="usuarios">
+            <span class="nav-icon">👤</span> Usuarios
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('config', this)" data-section="config">
+            <span class="nav-icon">⚙️</span> Configuración
+          </a>
+        </div>
+      </div>
     </nav>
   </aside>
 
@@ -613,6 +651,51 @@ $authUser = authUser();
         </div>
 
       </div><!-- /seccionUsuarios -->
+
+      <!-- ========== SECCIÓN INVENTARIOS ========== -->
+      <div class="section" id="seccionInventarios" style="display:none">
+
+        <div class="stats-bar">
+          <div class="stat-card">
+            <span class="stat-label">Total inventarios</span>
+            <span class="stat-value orange" id="invStatTotal">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Último</span>
+            <span class="stat-value" id="invStatUltimo">—</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar inventario..." oninput="onSearchInv(this.value)" id="invSearch">
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="abrirNuevoInventario()">+ Nuevo inventario</button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Número</th>
+                <th>Notas</th>
+                <th>Productos</th>
+                <th>Estado</th>
+                <th>Usuario</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="invTbody">
+              <tr class="spinner-row"><td colspan="8"><div class="spin"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /seccionInventarios -->
 
     </div><!-- /content -->
   </div><!-- /main -->
@@ -1335,6 +1418,72 @@ $authUser = authUser();
 
 <!-- ===== Toast ===== -->
 <div class="toast" id="toast"></div>
+
+<!-- ===== Modal Nuevo Inventario ===== -->
+<div class="modal-backdrop" id="invNuevoBackdrop" onclick="if(event.target===this)cerrarNuevoInventario()">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div class="modal-title">Nuevo inventario</div>
+      <button class="btn btn-ghost" onclick="cerrarNuevoInventario()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      <div style="font-weight:600;font-size:.9rem;color:var(--muted)">Cantidades contadas por producto</div>
+      <div class="table-card" style="margin:0;max-height:400px;overflow-y:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th style="text-align:center">Stock actual</th>
+              <th style="text-align:center">Cantidad contada</th>
+              <th style="text-align:center">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody id="invNuevoItems">
+            <tr><td colspan="4" style="text-align:center;padding:20px"><div class="spin"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notas</label>
+        <input type="text" id="invNuevoNotas" class="form-input" placeholder="Descripción opcional del inventario">
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:16px">
+      <button class="btn btn-ghost" onclick="cerrarNuevoInventario()">Cancelar</button>
+      <button class="btn btn-primary" id="invGuardarBtn" onclick="guardarInventario()">Guardar inventario</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Detalle Inventario ===== -->
+<div class="modal-backdrop" id="invDetalleBackdrop" onclick="if(event.target===this)cerrarDetalleInventario()">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div class="modal-title" id="invDetalleNumero">Detalle de inventario</div>
+      <button class="btn btn-ghost" onclick="cerrarDetalleInventario()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap" id="invDetalleInfo"></div>
+      <div class="table-card" style="margin:0;max-height:450px;overflow-y:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th style="text-align:center">Stock anterior</th>
+              <th style="text-align:center">Contado</th>
+              <th style="text-align:center">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody id="invDetalleItems">
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;padding:16px">
+      <button class="btn btn-ghost" onclick="cerrarDetalleInventario()">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <script src="assets/js/admin.js?v=<?= time() ?>"></script>
 </body>

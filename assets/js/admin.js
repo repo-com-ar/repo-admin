@@ -476,11 +476,30 @@ function closeSidebar() {
   document.getElementById('sidebarOverlay').classList.remove('active');
 }
 
+function toggleNavGroup(wrapId) {
+  document.getElementById(wrapId).classList.toggle('open');
+}
+
+// Secciones que pertenecen a cada grupo colapsable
+const NAV_GROUPS = {
+  navGroupProductos: ['productos', 'categorias', 'inventarios'],
+  navGroupVentas:    ['pedidos', 'clientes'],
+  navGroupCompras:   ['compras', 'proveedores'],
+  navGroupAdmin:     ['eventos', 'usuarios', 'config'],
+};
+
 function cambiarSeccion(seccion, navEl) {
   closeSidebar();
   // Actualizar sidebar
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (navEl) navEl.classList.add('active');
+
+  // Auto-expandir el grupo que contiene esta sección
+  Object.entries(NAV_GROUPS).forEach(([wrapId, secciones]) => {
+    if (secciones.includes(seccion)) {
+      document.getElementById(wrapId).classList.add('open');
+    }
+  });
 
   // Mostrar/ocultar secciones
   document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
@@ -534,6 +553,10 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionUsuarios').style.display = '';
     topbar.textContent = 'Usuarios del sistema';
     cargarUsuarios();
+  } else if (seccion === 'inventarios') {
+    document.getElementById('seccionInventarios').style.display = '';
+    topbar.textContent = 'Gestión de Inventarios';
+    cargarInventarios();
   }
 }
 
@@ -2156,6 +2179,181 @@ async function enviarMensaje() {
     showToast('Sin conexión al servidor');
     btn.disabled = false;
     btn.textContent = 'Enviar mensaje';
+  }
+}
+
+/* ===== Inventarios ===== */
+const INV_API = 'api/inventarios';
+let invBusqueda = '';
+
+async function cargarInventarios() {
+  const tbody = document.getElementById('invTbody');
+  tbody.innerHTML = '<tr class="spinner-row"><td colspan="8"><div class="spin"></div></td></tr>';
+  try {
+    const qs = invBusqueda ? '?q=' + encodeURIComponent(invBusqueda) : '';
+    const data = await fetch(INV_API + qs).then(r => r.json());
+    if (!data.ok) throw new Error(data.error);
+
+    const s = data.stats || {};
+    document.getElementById('invStatTotal').textContent = s.total ?? '—';
+    const ul = s.ultimo ? new Date(s.ultimo).toLocaleDateString('es-AR') : '—';
+    document.getElementById('invStatUltimo').textContent = ul;
+
+    const rows = data.data || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">Sin inventarios registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => `
+      <tr style="cursor:pointer" onclick="abrirDetalleInventario(${r.id})">
+        <td>${r.id}</td>
+        <td><strong>${esc(r.numero)}</strong></td>
+        <td style="color:var(--muted)">${esc(r.notas || '—')}</td>
+        <td style="text-align:center">${r.productos}</td>
+        <td><span class="badge ${r.estado === 'cerrado' ? 'badge-green' : 'badge-warn'}">${r.estado}</span></td>
+        <td style="color:var(--muted)">${esc(r.usuario_nombre || '—')}</td>
+        <td>${new Date(r.created_at).toLocaleString('es-AR')}</td>
+        <td onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="eliminarInventario(${r.id}, '${esc(r.numero)}')">🗑</button>
+        </td>
+      </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:24px">${esc(e.message)}</td></tr>`;
+  }
+}
+
+function onSearchInv(val) {
+  invBusqueda = val.trim();
+  cargarInventarios();
+}
+
+async function abrirNuevoInventario() {
+  document.getElementById('invNuevoNotas').value = '';
+  const tbody = document.getElementById('invNuevoItems');
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px"><div class="spin"></div></td></tr>';
+  document.getElementById('invNuevoBackdrop').classList.add('open');
+  document.getElementById('invGuardarBtn').disabled = false;
+  document.getElementById('invGuardarBtn').textContent = 'Guardar inventario';
+
+  try {
+    const data = await fetch('api/productos').then(r => r.json());
+    const prods = (data.data || []).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    if (!prods.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin productos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = prods.map(p => `
+      <tr>
+        <td>${esc(p.nombre)}</td>
+        <td style="text-align:center;color:var(--muted)">${p.stock_actual ?? 0}</td>
+        <td style="text-align:center">
+          <input type="number" min="0" step="1" value="${p.stock_actual ?? 0}"
+            class="form-input inv-qty-input" style="width:80px;text-align:center;padding:4px 8px"
+            data-id="${p.id}" data-nombre="${esc(p.nombre)}" data-anterior="${p.stock_actual ?? 0}"
+            oninput="invActualizarDif(this)">
+        </td>
+        <td style="text-align:center" id="invDif_${p.id}">0</td>
+      </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--danger);padding:16px">${esc(e.message)}</td></tr>`;
+  }
+}
+
+function invActualizarDif(input) {
+  const anterior = parseInt(input.dataset.anterior) || 0;
+  const contado  = parseInt(input.value) || 0;
+  const dif      = contado - anterior;
+  const cell     = document.getElementById('invDif_' + input.dataset.id);
+  if (!cell) return;
+  cell.textContent = (dif > 0 ? '+' : '') + dif;
+  cell.style.color = dif > 0 ? 'var(--success)' : dif < 0 ? 'var(--danger)' : '';
+}
+
+function cerrarNuevoInventario() {
+  document.getElementById('invNuevoBackdrop').classList.remove('open');
+}
+
+async function guardarInventario() {
+  const btn = document.getElementById('invGuardarBtn');
+  const notas = document.getElementById('invNuevoNotas').value.trim();
+  const inputs = document.querySelectorAll('.inv-qty-input');
+  if (!inputs.length) { showToast('Carga los productos primero'); return; }
+
+  const items = Array.from(inputs).map(inp => ({
+    producto_id:     parseInt(inp.dataset.id),
+    nombre:          inp.dataset.nombre,
+    stock_anterior:  parseInt(inp.dataset.anterior) || 0,
+    cantidad_contada: parseInt(inp.value) || 0,
+  }));
+
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  try {
+    const data = await fetch(INV_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notas, items }),
+    }).then(r => r.json());
+
+    if (!data.ok) throw new Error(data.error);
+    cerrarNuevoInventario();
+    showToast('Inventario ' + data.numero + ' guardado');
+    cargarInventarios();
+  } catch (e) {
+    showToast('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Guardar inventario';
+  }
+}
+
+async function abrirDetalleInventario(id) {
+  document.getElementById('invDetalleNumero').textContent = 'Cargando…';
+  document.getElementById('invDetalleInfo').innerHTML = '';
+  document.getElementById('invDetalleItems').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px"><div class="spin"></div></td></tr>';
+  document.getElementById('invDetalleBackdrop').classList.add('open');
+
+  try {
+    const data = await fetch(INV_API + '?id=' + id).then(r => r.json());
+    if (!data.ok) throw new Error(data.error);
+    const inv = data.data;
+    document.getElementById('invDetalleNumero').textContent = inv.numero;
+    document.getElementById('invDetalleInfo').innerHTML = `
+      <span class="badge ${inv.estado === 'cerrado' ? 'badge-green' : 'badge-warn'}">${inv.estado}</span>
+      <span style="color:var(--muted);font-size:.85rem">${new Date(inv.created_at).toLocaleString('es-AR')}</span>
+      ${inv.usuario_nombre ? `<span style="color:var(--muted);font-size:.85rem">👤 ${esc(inv.usuario_nombre)}</span>` : ''}
+      ${inv.notas ? `<span style="color:var(--text);font-size:.85rem">📝 ${esc(inv.notas)}</span>` : ''}
+      <span style="color:var(--muted);font-size:.85rem">${inv.productos} productos</span>`;
+
+    const items = inv.items || [];
+    document.getElementById('invDetalleItems').innerHTML = items.length ? items.map(it => {
+      const dif = it.diferencia;
+      const difColor = dif > 0 ? 'var(--success)' : dif < 0 ? 'var(--danger)' : '';
+      return `<tr>
+        <td>${esc(it.nombre)}</td>
+        <td style="text-align:center;color:var(--muted)">${it.stock_anterior}</td>
+        <td style="text-align:center">${it.cantidad_contada}</td>
+        <td style="text-align:center;font-weight:600;color:${difColor}">${dif > 0 ? '+' : ''}${dif}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin ítems</td></tr>';
+  } catch (e) {
+    document.getElementById('invDetalleNumero').textContent = 'Error';
+    document.getElementById('invDetalleItems').innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--danger);padding:16px">${esc(e.message)}</td></tr>`;
+  }
+}
+
+function cerrarDetalleInventario() {
+  document.getElementById('invDetalleBackdrop').classList.remove('open');
+}
+
+async function eliminarInventario(id, numero) {
+  if (!confirm('¿Eliminar inventario ' + numero + '? Esta acción no se puede deshacer.')) return;
+  try {
+    const data = await fetch(INV_API + '?id=' + id, { method: 'DELETE' }).then(r => r.json());
+    if (!data.ok) throw new Error(data.error);
+    showToast('Inventario eliminado');
+    cargarInventarios();
+  } catch (e) {
+    showToast('Error: ' + e.message);
   }
 }
 
