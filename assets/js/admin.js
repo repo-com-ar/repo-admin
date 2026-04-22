@@ -20,6 +20,7 @@ const CAT_API = 'api/categorias';
 const PED_API = 'api/pedidos';
 const CFG_API = 'api/configuracion';
 const CLI_API = 'api/clientes';
+const REP_API = 'api/repartidores';
 const PROV_API = 'api/proveedores';
 const COMP_API = 'api/compras';
 const CART_API = 'api/carritos';
@@ -484,7 +485,7 @@ function toggleNavGroup(wrapId) {
 // Secciones que pertenecen a cada grupo colapsable
 const NAV_GROUPS = {
   navGroupProductos: ['productos', 'categorias', 'inventarios'],
-  navGroupVentas:    ['pedidos', 'clientes', 'carritos'],
+  navGroupVentas:    ['pedidos', 'clientes', 'carritos', 'repartidores'],
   navGroupCompras:   ['compras', 'proveedores'],
   navGroupAdmin:     ['eventos', 'usuarios', 'config'],
 };
@@ -562,6 +563,10 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionCarritos').style.display = '';
     topbar.textContent = 'Gestión de Carritos';
     cargarCarritos();
+  } else if (seccion === 'repartidores') {
+    document.getElementById('seccionRepartidores').style.display = '';
+    topbar.textContent = 'Gestión de Repartidores';
+    cargarRepartidores();
   }
 }
 
@@ -1399,6 +1404,197 @@ function eliminarCliente(id, nombre) {
   document.getElementById('confirmBackdrop').classList.add('open');
 }
 
+/* ===== Repartidores ===== */
+var repartidores = [];
+var repSearchTimer = null;
+var filtroBusqRep = '';
+var repEditandoId = null;
+var repMapLat = null;
+var repMapLng = null;
+
+function onSearchRepartidor(val) {
+  clearTimeout(repSearchTimer);
+  repSearchTimer = setTimeout(function() { filtroBusqRep = val; cargarRepartidores(); }, 300);
+}
+
+async function cargarRepartidores() {
+  try {
+    var url = REP_API + '?q=' + encodeURIComponent(filtroBusqRep);
+    var res = await fetch(url);
+    var data = await res.json();
+    if (data.ok) {
+      repartidores = data.data || [];
+      renderRepartidores();
+      if (data.stats) {
+        document.getElementById('repStatTotal').textContent = data.stats.total;
+      }
+    } else {
+      showToast(data.error || 'Error al cargar repartidores', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+function renderRepartidores() {
+  var lista = document.getElementById('repartidoresLista');
+  if (!repartidores.length) {
+    lista.innerHTML = '<div class="table-empty">No hay repartidores registrados</div>';
+    return;
+  }
+  lista.innerHTML = '<div class="table-card"><table class="table"><thead><tr>' +
+    '<th>Nombre / Correo</th><th>Celular</th><th>Dirección / Ubicación</th><th></th>' +
+    '</tr></thead><tbody>' +
+    repartidores.map(function(r) { return renderFilaRepartidor(r); }).join('') +
+    '</tbody></table></div>';
+}
+
+function renderFilaRepartidor(r) {
+  var correo = r.correo ? '<br><a class="cli-email" href="mailto:' + esc(r.correo) + '">' + esc(r.correo) + '</a>' : '';
+  var dir    = r.direccion ? esc(r.direccion.length > 40 ? r.direccion.substring(0,40) + '…' : r.direccion) : '—';
+  var mapa   = (r.lat && r.lng)
+    ? '<br><a class="cli-mapa" href="https://www.google.com/maps?q=' + r.lat + ',' + r.lng + '" target="_blank" rel="noopener">🗺️ Ver ubicación</a>'
+    : '';
+  return '<tr id="rep-row-' + r.id + '" style="cursor:pointer" onclick="abrirDetalleRepartidor(' + r.id + ')">' +
+    '<td><strong>' + esc(r.nombre) + '</strong>' + correo + '</td>' +
+    '<td>' + esc(r.celular || '—') + '</td>' +
+    '<td>' + dir + mapa + '</td>' +
+    '<td><div class="actions" onclick="event.stopPropagation()">' +
+      '<button class="btn-icon-sm" title="Ver detalle" onclick="abrirDetalleRepartidor(' + r.id + ')">🔍</button>' +
+      '<button class="btn-icon-sm" title="Editar" onclick="abrirEditarRepartidor(' + r.id + ')">✏️</button>' +
+      '<button class="btn-icon-sm" title="Eliminar" onclick="eliminarRepartidor(' + r.id + ',\'' + esc(r.nombre).replace(/'/g, "\\'") + '\')">🗑️</button>' +
+    '</div></td>' +
+    '</tr>';
+}
+
+function abrirDetalleRepartidor(id) {
+  var r = repartidores.find(function(x) { return x.id === id; });
+  if (!r) return;
+
+  document.getElementById('repDetNombre').textContent    = r.nombre || '—';
+  document.getElementById('repDetCelular').textContent   = r.celular || '—';
+  document.getElementById('repDetCorreo').textContent    = r.correo || '—';
+  document.getElementById('repDetDireccion').textContent = r.direccion || '—';
+  document.getElementById('repDetContrasena').textContent = r.contrasena || '—';
+  document.getElementById('repDetClave').textContent      = r.clave      || '—';
+
+  var ubiEl = document.getElementById('repDetUbicacion');
+  if (r.lat && r.lng) {
+    ubiEl.innerHTML = '<a href="https://www.google.com/maps?q=' + r.lat + ',' + r.lng + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">📍 Ver en Google Maps</a>'
+      + ' <span style="color:var(--text-secondary);font-size:.8rem">(' + parseFloat(r.lat).toFixed(6) + ', ' + parseFloat(r.lng).toFixed(6) + ')</span>';
+  } else {
+    ubiEl.innerHTML = '<span style="color:var(--text-secondary)">Sin ubicación registrada</span>';
+  }
+
+  document.getElementById('btnRepDetEditar').onclick = function() {
+    cerrarDetalleRepartidor();
+    abrirEditarRepartidor(id);
+  };
+
+  document.getElementById('repDetBackdrop').classList.add('open');
+}
+
+function cerrarDetalleRepartidor() {
+  document.getElementById('repDetBackdrop').classList.remove('open');
+}
+
+function abrirNuevoRepartidor() {
+  repEditandoId = null;
+  document.getElementById('repModalTitulo').textContent = 'Nuevo repartidor';
+  document.getElementById('repNombre').value     = '';
+  document.getElementById('repCelular').value    = '';
+  document.getElementById('repCorreo').value     = '';
+  document.getElementById('repDireccion').value  = '';
+  document.getElementById('repContrasena').value = '';
+  document.getElementById('repClave').value      = '';
+  repMapLat = null;
+  repMapLng = null;
+  document.getElementById('repMapInfo').innerHTML = 'Sin ubicación seleccionada.';
+  document.getElementById('repModalBackdrop').classList.add('open');
+  document.getElementById('repNombre').focus();
+}
+
+function abrirEditarRepartidor(id) {
+  var r = repartidores.find(function(x) { return x.id === id; });
+  if (!r) return;
+  repEditandoId = id;
+  document.getElementById('repModalTitulo').textContent = 'Editar repartidor';
+  document.getElementById('repNombre').value     = r.nombre     || '';
+  document.getElementById('repCelular').value    = r.celular    || '';
+  document.getElementById('repCorreo').value     = r.correo     || '';
+  document.getElementById('repDireccion').value  = r.direccion  || '';
+  document.getElementById('repContrasena').value = r.contrasena || '';
+  document.getElementById('repClave').value      = r.clave      || '';
+
+  repMapLat = r.lat ? parseFloat(r.lat) : null;
+  repMapLng = r.lng ? parseFloat(r.lng) : null;
+  document.getElementById('repMapInfo').innerHTML = (repMapLat && repMapLng)
+    ? '📍 <strong>' + repMapLat.toFixed(6) + ', ' + repMapLng.toFixed(6) + '</strong> — <a href="https://www.google.com/maps?q=' + repMapLat + ',' + repMapLng + '" target="_blank" style="color:var(--primary)">Ver en Maps</a>'
+    : 'Sin ubicación seleccionada.';
+
+  document.getElementById('repModalBackdrop').classList.add('open');
+  document.getElementById('repNombre').focus();
+}
+
+function cerrarModalRepartidor() {
+  document.getElementById('repModalBackdrop').classList.remove('open');
+  repEditandoId = null;
+  repMapLat = null;
+  repMapLng = null;
+}
+
+async function guardarRepartidor() {
+  var nombre = document.getElementById('repNombre').value.trim();
+  if (!nombre) { showToast('El nombre es obligatorio', true); return; }
+
+  var body = {
+    nombre:     nombre,
+    celular:    document.getElementById('repCelular').value.trim(),
+    correo:     document.getElementById('repCorreo').value.trim(),
+    direccion:  document.getElementById('repDireccion').value.trim(),
+    contrasena: document.getElementById('repContrasena').value.trim(),
+    clave:      document.getElementById('repClave').value.trim(),
+    lat:        repMapLat,
+    lng:        repMapLng,
+  };
+
+  var method = 'POST';
+  if (repEditandoId) { body.id = repEditandoId; method = 'PUT'; }
+
+  try {
+    var res  = await fetch(REP_API, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    var data = await res.json();
+    if (data.ok) {
+      cerrarModalRepartidor();
+      cargarRepartidores();
+      showToast(repEditandoId ? 'Repartidor actualizado' : 'Repartidor creado');
+    } else {
+      showToast(data.error || 'Error al guardar', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+function eliminarRepartidor(id, nombre) {
+  document.getElementById('confirmMsg').textContent = '¿Eliminás el repartidor "' + nombre + '"?';
+  confirmCallback = async function() {
+    try {
+      var res  = await fetch(REP_API + '?id=' + id, { method: 'DELETE' });
+      var data = await res.json();
+      if (data.ok) {
+        showToast('Repartidor eliminado');
+        cargarRepartidores();
+      } else {
+        showToast(data.error || 'Error al eliminar', true);
+      }
+    } catch (e) {
+      showToast('Error de conexión', true);
+    }
+  };
+  document.getElementById('confirmBackdrop').classList.add('open');
+}
+
 /* ===== Proveedores ===== */
 var proveedores = [];
 var provSearchTimer = null;
@@ -2009,13 +2205,13 @@ function abrirMapaSelector(context) {
   document.getElementById('mapaBackdrop').classList.add('open');
 
   setTimeout(function() {
-    var activeLat = mapaContext === 'cliente' ? cliMapLat : mapaContext === 'proveedor' ? provMapLat : centroDistLat;
-    var activeLng = mapaContext === 'cliente' ? cliMapLng : mapaContext === 'proveedor' ? provMapLng : centroDistLng;
+    var activeLat = mapaContext === 'cliente' ? cliMapLat : mapaContext === 'proveedor' ? provMapLat : mapaContext === 'repartidor' ? repMapLat : centroDistLat;
+    var activeLng = mapaContext === 'cliente' ? cliMapLng : mapaContext === 'proveedor' ? provMapLng : mapaContext === 'repartidor' ? repMapLng : centroDistLng;
     var defaultLat = activeLat || -31.5375;
     var defaultLng = activeLng || -68.5364;
     var center = { lat: defaultLat, lng: defaultLng };
 
-    var activeLat2 = mapaContext === 'cliente' ? cliMapLat : mapaContext === 'proveedor' ? provMapLat : centroDistLat;
+    var activeLat2 = mapaContext === 'cliente' ? cliMapLat : mapaContext === 'proveedor' ? provMapLat : mapaContext === 'repartidor' ? repMapLat : centroDistLat;
     mapaSelector = new google.maps.Map(document.getElementById('mapaSelector'), {
       center: center,
       zoom: activeLat2 ? 16 : 12,
@@ -2070,6 +2266,13 @@ function aceptarUbicacion() {
       '📍 <strong>' + provMapLat.toFixed(6) + ', ' + provMapLng.toFixed(6) + '</strong>';
     cerrarMapaSelector();
     showToast('Ubicación del proveedor seleccionada');
+  } else if (mapaContext === 'repartidor') {
+    repMapLat = pos.lat();
+    repMapLng = pos.lng();
+    document.getElementById('repMapInfo').innerHTML =
+      '📍 <strong>' + repMapLat.toFixed(6) + ', ' + repMapLng.toFixed(6) + '</strong>';
+    cerrarMapaSelector();
+    showToast('Ubicación del repartidor seleccionada');
   } else {
     centroDistLat = pos.lat();
     centroDistLng = pos.lng();

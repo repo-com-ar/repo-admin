@@ -1,0 +1,206 @@
+<?php
+/**
+ * API admin — Repartidores (CRUD)
+ *
+ * GET    /repo-admin/api/repartidores.php[?q={texto}]
+ * POST   /repo-admin/api/repartidores.php   — crear repartidor
+ * PUT    /repo-admin/api/repartidores.php   — editar repartidor
+ * DELETE /repo-admin/api/repartidores.php?id={id}
+ */
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit; }
+
+require_once __DIR__ . '/../lib/auth_check.php';
+requireAuth();
+
+require_once __DIR__ . '/../../repo-api/config/db.php';
+
+try {
+    $pdo = getDB();
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'DB: ' . $e->getMessage()]);
+    exit;
+}
+
+// Crear tabla si no existe
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS repartidores (
+        id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(120) NOT NULL,
+        correo      VARCHAR(150) DEFAULT NULL,
+        celular     VARCHAR(40)  DEFAULT '',
+        direccion   VARCHAR(255) DEFAULT '',
+        contrasena  VARCHAR(100) NOT NULL DEFAULT '',
+        clave       VARCHAR(100) NOT NULL DEFAULT '',
+        lat         DECIMAL(10,7) DEFAULT NULL,
+        lng         DECIMAL(10,7) DEFAULT NULL,
+        created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+        updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+switch ($method) {
+
+    // ---- GET: listar repartidores ----
+    case 'GET':
+        $q = isset($_GET['q']) ? trim($_GET['q']) : '';
+
+        $where  = [];
+        $params = [];
+
+        if ($q) {
+            $where[] = '(nombre LIKE ? OR celular LIKE ? OR direccion LIKE ?)';
+            $like = "%$q%";
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $sql = "SELECT id, nombre, correo, celular, direccion, contrasena, clave, lat, lng, created_at
+                FROM repartidores"
+             . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '')
+             . " ORDER BY id DESC LIMIT 200";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
+
+        $total = $pdo->query("SELECT COUNT(*) FROM repartidores")->fetchColumn();
+
+        echo json_encode([
+            'ok'    => true,
+            'data'  => $rows,
+            'stats' => ['total' => (int)$total],
+        ]);
+        break;
+
+    // ---- POST: crear repartidor ----
+    case 'POST':
+        $body = json_decode(file_get_contents('php://input'), true);
+        $nombre = trim($body['nombre'] ?? '');
+
+        if (!$nombre) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'El nombre es obligatorio']);
+            break;
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO repartidores (nombre, correo, celular, direccion, contrasena, clave, lat, lng)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $nombre,
+            trim($body['correo']    ?? '') ?: null,
+            trim($body['celular']   ?? ''),
+            trim($body['direccion'] ?? ''),
+            trim($body['contrasena'] ?? ''),
+            trim($body['clave']     ?? ''),
+            isset($body['lat']) && $body['lat'] !== null ? (float)$body['lat'] : null,
+            isset($body['lng']) && $body['lng'] !== null ? (float)$body['lng'] : null,
+        ]);
+
+        echo json_encode(['ok' => true, 'id' => (int)$pdo->lastInsertId()]);
+        break;
+
+    // ---- PUT: editar repartidor ----
+    case 'PUT':
+        $body = json_decode(file_get_contents('php://input'), true);
+        $id   = isset($body['id']) ? (int)$body['id'] : 0;
+
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'ID requerido']);
+            break;
+        }
+
+        $campos = [];
+        $params = [];
+
+        if (isset($body['nombre']) && trim($body['nombre']) !== '') {
+            $campos[] = 'nombre = ?';
+            $params[] = trim($body['nombre']);
+        }
+        if (isset($body['correo'])) {
+            $campos[] = 'correo = ?';
+            $params[] = trim($body['correo']) ?: null;
+        }
+        if (isset($body['celular'])) {
+            $campos[] = 'celular = ?';
+            $params[] = trim($body['celular']);
+        }
+        if (isset($body['direccion'])) {
+            $campos[] = 'direccion = ?';
+            $params[] = trim($body['direccion']);
+        }
+        if (isset($body['contrasena'])) {
+            $campos[] = 'contrasena = ?';
+            $params[] = trim($body['contrasena']);
+        }
+        if (isset($body['clave'])) {
+            $campos[] = 'clave = ?';
+            $params[] = trim($body['clave']);
+        }
+        if (array_key_exists('lat', $body)) {
+            $campos[] = 'lat = ?';
+            $params[] = $body['lat'] !== null ? (float)$body['lat'] : null;
+        }
+        if (array_key_exists('lng', $body)) {
+            $campos[] = 'lng = ?';
+            $params[] = $body['lng'] !== null ? (float)$body['lng'] : null;
+        }
+
+        if (empty($campos)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Nada que actualizar']);
+            break;
+        }
+
+        $existe = $pdo->prepare("SELECT id FROM repartidores WHERE id = ?");
+        $existe->execute([$id]);
+        if (!$existe->fetch()) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'error' => 'Repartidor no encontrado']);
+            break;
+        }
+
+        $params[] = $id;
+        $stmt = $pdo->prepare("UPDATE repartidores SET " . implode(', ', $campos) . " WHERE id = ?");
+        $stmt->execute($params);
+
+        echo json_encode(['ok' => true, 'id' => $id]);
+        break;
+
+    // ---- DELETE: eliminar repartidor ----
+    case 'DELETE':
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'ID requerido']);
+            break;
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM repartidores WHERE id = ?");
+        $stmt->execute([$id]);
+
+        if ($stmt->rowCount() === 0) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'error' => 'Repartidor no encontrado']);
+            break;
+        }
+
+        echo json_encode(['ok' => true]);
+        break;
+
+    default:
+        http_response_code(405);
+        echo json_encode(['ok' => false, 'error' => 'Método no permitido']);
+}

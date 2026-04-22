@@ -64,6 +64,9 @@ $authUser = authUser();
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('carritos', this)" data-section="carritos">
             <span class="nav-icon">🛒</span> Carritos
           </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('repartidores', this)" data-section="repartidores">
+            <span class="nav-icon">🛵</span> Repartidores
+          </a>
         </div>
       </div>
 
@@ -450,6 +453,35 @@ $authUser = authUser();
         </div>
 
       </div><!-- /seccionClientes -->
+
+      <!-- ========== SECCIÓN REPARTIDORES ========== -->
+      <div class="section" id="seccionRepartidores" style="display:none">
+
+        <!-- Stats repartidores -->
+        <div class="stats-bar">
+          <div class="stat-card">
+            <span class="stat-label">Total repartidores</span>
+            <span class="stat-value orange" id="repStatTotal">—</span>
+          </div>
+        </div>
+
+        <!-- Toolbar repartidores -->
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar repartidor..." oninput="onSearchRepartidor(this.value)">
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="cargarRepartidores()">🔄 Actualizar</button>
+            <button class="btn btn-primary" onclick="abrirNuevoRepartidor()">+ Nuevo</button>
+          </div>
+        </div>
+
+        <!-- Lista de repartidores -->
+        <div id="repartidoresLista">
+          <div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>
+        </div>
+
+      </div><!-- /seccionRepartidores -->
 
       <!-- ========== SECCIÓN CARRITOS ========== -->
       <div class="section" id="seccionCarritos" style="display:none">
@@ -1158,6 +1190,104 @@ $authUser = authUser();
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarModalCliente()">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Detalle Repartidor ===== -->
+<div class="modal-backdrop" id="repDetBackdrop" onclick="if(event.target===this)cerrarDetalleRepartidor()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title" id="repDetNombre"></div>
+      <button class="btn btn-ghost" onclick="cerrarDetalleRepartidor()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Correo electrónico</div>
+        <div id="repDetCorreo" style="font-weight:600"></div>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Celular</div>
+        <div id="repDetCelular" style="font-weight:600"></div>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Dirección</div>
+        <div id="repDetDireccion"></div>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Ubicación GPS</div>
+        <div id="repDetUbicacion"></div>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Seguridad</div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:2px">Contraseña</div>
+            <div id="repDetContrasena" style="font-weight:600;font-family:monospace"></div>
+          </div>
+          <div>
+            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:2px">Clave</div>
+            <div id="repDetClave" style="font-weight:600;font-family:monospace"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarDetalleRepartidor()">Cerrar</button>
+      <button class="btn btn-primary" id="btnRepDetEditar">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Editar/Nuevo Repartidor ===== -->
+<div class="modal-backdrop" id="repModalBackdrop" onclick="if(event.target===this)cerrarModalRepartidor()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title" id="repModalTitulo">Editar repartidor</div>
+      <button class="btn btn-ghost" onclick="cerrarModalRepartidor()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" id="repNombre" placeholder="Nombre completo">
+      </div>
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="repCorreo" placeholder="email@ejemplo.com">
+      </div>
+      <div class="form-group">
+        <label>Celular</label>
+        <input type="tel" id="repCelular" placeholder="Ej: 11 2345-6789">
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <input type="text" id="repDireccion" placeholder="Calle, número, piso/depto">
+      </div>
+      <div class="form-group">
+        <label>Ubicación en el mapa</label>
+        <div id="repMapInfo" class="config-hint" style="margin-bottom:8px">Sin ubicación seleccionada.</div>
+        <button type="button" class="btn btn-ghost" onclick="abrirMapaSelector('repartidor')">🗺️ Seleccionar en el mapa</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="text" id="repContrasena" placeholder="Contraseña de acceso" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Clave</label>
+          <input type="text" id="repClave" placeholder="Clave secundaria" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalRepartidor()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarRepartidor()">Guardar</button>
     </div>
   </div>
 </div>
