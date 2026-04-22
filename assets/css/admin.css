@@ -231,6 +231,7 @@ tbody tr:hover { background: var(--row-hover); }
 .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
 
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-3 { grid-template-columns: repeat(3, 1fr); }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group label { font-size: .8rem; font-weight: 600; color: var(--muted); }
 .form-group input, .form-group select, .form-group textarea { width: 100%; }

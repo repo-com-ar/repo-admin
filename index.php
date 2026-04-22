@@ -188,14 +188,16 @@ $authUser = authUser();
               <th>Imagen</th>
               <th>Nombre</th>
               <th>Categoría</th>
-              <th>Precio</th>
+              <th>P. Compra</th>
+              <th>Margen</th>
+              <th>P. Venta</th>
               <th>Unidad</th>
               <th>Stock</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr class="spinner-row"><td colspan="8"><div class="spin"></div></td></tr>
+            <tr class="spinner-row"><td colspan="10"><div class="spin"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -629,6 +631,8 @@ $authUser = authUser();
         <img id="prodDetImg" src="" alt="" style="max-width:160px;max-height:160px;border-radius:12px;object-fit:cover">
       </div>
 
+      <!-- Código y EAN eliminados -->
+
       <div class="ped-detail-section">
         <div class="ped-detail-label">Categoría</div>
         <div id="prodDetCategoria" style="font-weight:600"></div>
@@ -683,12 +687,32 @@ $authUser = authUser();
 
       <div class="form-row">
         <div class="form-group">
-          <label>Nombre *</label>
-          <input type="text" id="fNombre" placeholder="Ej: Manzana Roja">
+          <label>SKU</label>
+          <input type="text" id="fCodigo" placeholder="Ej: FRU-001">
         </div>
         <div class="form-group">
-          <label>Precio *</label>
-          <input type="number" id="fPrecio" placeholder="0" min="0" step="0.01">
+          <label>EAN</label>
+          <input type="text" id="fEan" placeholder="Ej: 7790001234567">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" id="fNombre" placeholder="Ej: Manzana Roja">
+      </div>
+
+      <div class="form-row form-row-3">
+        <div class="form-group">
+          <label>P. Compra</label>
+          <input type="number" id="fPrecioCompra" placeholder="0" min="0" step="0.01" oninput="calcularPrecioVenta()">
+        </div>
+        <div class="form-group">
+          <label>Margen %</label>
+          <input type="number" id="fMargen" placeholder="0" min="0" step="0.01" oninput="calcularPrecioVenta()">
+        </div>
+        <div class="form-group">
+          <label>P. Venta *</label>
+          <input type="number" id="fPrecioVenta" placeholder="0" min="0" step="0.01" oninput="calcularMargen()">
         </div>
       </div>
 
@@ -698,21 +722,12 @@ $authUser = authUser();
           <select id="fCategoria"><!-- poblado por JS --></select>
         </div>
         <div class="form-group">
-          <label>Unidad *</label>
-          <select id="fUnidad" onchange="togglePesoPieza()"><!-- poblado por JS --></select>
+          <label>Contenido</label>
+          <input type="text" id="fContenido" placeholder="Ej: 500g, 1kg, 2L">
         </div>
-      </div>
-
-      <div class="form-group" id="grupoPesoPieza" style="display:none">
-        <label>Peso aprox. por pieza (kg)</label>
-        <input type="number" id="fPesoPieza" placeholder="Ej: 0.250" min="0" step="0.001">
-        <small style="color:var(--muted);font-size:.72rem">Peso aproximado de una unidad cuando se vende por kilo</small>
-      </div>
-
-      <div class="form-row">
         <div class="form-group">
-          <label>Emoji</label>
-          <input type="text" id="fEmoji" placeholder="🍎" maxlength="4">
+          <label>Unidad *</label>
+          <select id="fUnidad"><!-- poblado por JS --></select>
         </div>
       </div>
 

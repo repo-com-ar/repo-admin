@@ -83,22 +83,24 @@ async function renderStats() {
 
 /* ===== Table ===== */
 function showTableLoading() {
-  document.getElementById('tbody').innerHTML = `<tr class="spinner-row"><td colspan="8"><div class="spin"></div></td></tr>`;
+  document.getElementById('tbody').innerHTML = `<tr class="spinner-row"><td colspan="10"><div class="spin"></div></td></tr>`;
 }
 
 function renderTabla() {
   const tbody = document.getElementById('tbody');
   if (!productos.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="table-empty">Sin productos para los filtros aplicados</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="table-empty">Sin productos para los filtros aplicados</td></tr>`;
     return;
   }
   tbody.innerHTML = productos.map(p => `
     <tr data-id="${p.id}">
       <td class="td-id">#${p.id}</td>
-      <td><img class="td-img" src="${p.imagen || ''}" alt="${p.nombre}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2244%22 height=%2244%22><rect width=%2244%22 height=%2244%22 fill=%22%23e2e8f0%22/><text x=%2250%25%22 y=%2254%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2220%22>${p.emoji || '📦'}</text></svg>'"></td>
+      <td><img class="td-img" src="${p.imagen || ''}" alt="${p.nombre}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2244%22 height=%2244%22><rect width=%2244%22 height=%2244%22 fill=%22%23e2e8f0%22/><text x=%2250%25%22 y=%2254%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2220%22>📦</text></svg>'"></td>
       <td class="td-nombre">${esc(p.nombre)}</td>
       <td><span class="badge badge-cat">${esc(p.categoria)}</span></td>
-      <td>$${Number(p.precio).toLocaleString('es-AR')}</td>
+      <td>$${Number(p.precio_compra ?? 0).toLocaleString('es-AR')}</td>
+      <td>${p.margen != null ? Number(p.margen).toLocaleString('es-AR', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%' : '—'}</td>
+      <td>$${Number(p.precio_venta ?? 0).toLocaleString('es-AR')}</td>
       <td>${esc(p.unidad)}</td>
       <td>
         ${p.stock_actual > 0
@@ -130,9 +132,9 @@ function abrirDetalleProducto(id) {
 
   const cat = CATEGORIAS.find(c => c.id === p.categoria);
 
-  document.getElementById('prodDetNombre').textContent    = (p.emoji ? p.emoji + ' ' : '') + p.nombre;
+  document.getElementById('prodDetNombre').textContent    = p.nombre;
   document.getElementById('prodDetCategoria').textContent = cat ? cat.emoji + ' ' + cat.label : p.categoria;
-  document.getElementById('prodDetPrecio').textContent    = '$' + Number(p.precio).toLocaleString('es-AR') + ' / ' + p.unidad;
+  document.getElementById('prodDetPrecio').textContent    = '$' + Number(p.precio_venta ?? 0).toLocaleString('es-AR') + ' / ' + p.unidad;
   document.getElementById('prodDetStockActual').textContent      = p.stock_actual      ?? 0;
   document.getElementById('prodDetStockComprometido').textContent = p.stock_comprometido ?? 0;
   document.getElementById('prodDetStockMinimo').textContent      = p.stock_minimo      ?? 0;
@@ -185,18 +187,20 @@ function abrirEditar(id) {
   if (!p) return;
   editandoId = id;
   document.getElementById('modalTitle').textContent = 'Editar producto';
-  document.getElementById('fNombre').value    = p.nombre;
-  document.getElementById('fPrecio').value    = p.precio;
+  document.getElementById('fCodigo').value    = p.sku || '';
+  document.getElementById('fEan').value       = p.ean || '';
+  document.getElementById('fNombre').value       = p.nombre;
+  document.getElementById('fPrecioCompra').value = p.precio_compra ?? '';
+  document.getElementById('fMargen').value       = p.margen ?? '';
+  document.getElementById('fPrecioVenta').value  = p.precio_venta ?? '';
   document.getElementById('fCategoria').value = p.categoria;
-  document.getElementById('fEmoji').value     = p.emoji || '';
-  document.getElementById('fImagen').value    = p.imagen || '';
+  document.getElementById('fContenido').value  = p.contenido || '';
   document.getElementById('fUnidad').value    = p.unidad;
-  document.getElementById('fPesoPieza').value  = p.peso_pieza || '';
+  document.getElementById('fImagen').value    = p.imagen || '';
   document.getElementById('fStockActual').value       = p.stock_actual ?? 1;
   document.getElementById('fStockComprometido').value = p.stock_comprometido ?? 0;
   document.getElementById('fStockMinimo').value       = p.stock_minimo ?? 0;
   document.getElementById('fStockRecomendado').value  = p.stock_recomendado ?? 3;
-  togglePesoPieza();
   actualizarPreview();
   document.getElementById('modalBackdrop').classList.add('open');
 }
@@ -206,7 +210,7 @@ function cerrarModal() {
 }
 
 function limpiarForm() {
-  ['fNombre','fPrecio','fEmoji','fImagen','fPesoPieza'].forEach(id => document.getElementById(id).value = '');
+  ['fCodigo','fEan','fNombre','fPrecioCompra','fMargen','fPrecioVenta','fContenido','fImagen'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fCategoria').value = 'frutas';
   document.getElementById('fUnidad').value    = 'kg';
   document.getElementById('fStockActual').value       = 1;
@@ -214,13 +218,24 @@ function limpiarForm() {
   document.getElementById('fStockMinimo').value       = 0;
   document.getElementById('fStockRecomendado').value  = 3;
   document.getElementById('fArchivo').value   = '';
-  togglePesoPieza();
   actualizarPreview();
 }
 
-function togglePesoPieza() {
-  const unidad = document.getElementById('fUnidad').value;
-  document.getElementById('grupoPesoPieza').style.display = unidad === 'kg' ? '' : 'none';
+/* ===== Cálculo de precios ===== */
+function calcularPrecioVenta() {
+  const compra = parseFloat(document.getElementById('fPrecioCompra').value) || 0;
+  const margen = parseFloat(document.getElementById('fMargen').value) || 0;
+  if (compra > 0) {
+    document.getElementById('fPrecioVenta').value = (compra * (1 + margen / 100)).toFixed(2);
+  }
+}
+
+function calcularMargen() {
+  const compra = parseFloat(document.getElementById('fPrecioCompra').value) || 0;
+  const venta  = parseFloat(document.getElementById('fPrecioVenta').value) || 0;
+  if (compra > 0) {
+    document.getElementById('fMargen').value = ((venta - compra) / compra * 100).toFixed(2);
+  }
 }
 
 /* ===== Preview imagen ===== */
@@ -317,22 +332,25 @@ function initDragDrop() {
 
 /* ===== Guardar ===== */
 async function guardarProducto() {
-  const nombre    = document.getElementById('fNombre').value.trim();
-  const precio    = parseFloat(document.getElementById('fPrecio').value);
+  const nombre         = document.getElementById('fNombre').value.trim();
+  const precio_compra  = parseFloat(document.getElementById('fPrecioCompra').value) || 0;
+  const margen         = parseFloat(document.getElementById('fMargen').value) || 0;
+  const precio_venta   = parseFloat(document.getElementById('fPrecioVenta').value);
   const categoria = document.getElementById('fCategoria').value;
-  const emoji     = document.getElementById('fEmoji').value.trim();
-  const imagen    = document.getElementById('fImagen').value.trim();
+  const sku       = document.getElementById('fCodigo').value.trim();
+  const ean       = document.getElementById('fEan').value.trim();
+  const contenido = document.getElementById('fContenido').value.trim();
   const unidad    = document.getElementById('fUnidad').value;
+  const imagen    = document.getElementById('fImagen').value.trim();
   const stock_actual       = parseInt(document.getElementById('fStockActual').value) || 0;
   const stock_comprometido = parseInt(document.getElementById('fStockComprometido').value) || 0;
   const stock_minimo       = parseInt(document.getElementById('fStockMinimo').value) || 0;
   const stock_recomendado  = parseInt(document.getElementById('fStockRecomendado').value) || 3;
-  const peso_pieza = unidad === 'kg' ? (document.getElementById('fPesoPieza').value || null) : null;
 
   if (!nombre) { showToast('El nombre es obligatorio', true); return; }
-  if (isNaN(precio) || precio < 0) { showToast('Precio inválido', true); return; }
+  if (isNaN(precio_venta) || precio_venta < 0) { showToast('Precio de venta inválido', true); return; }
 
-  const body = { nombre, precio, categoria, emoji, imagen, unidad, peso_pieza, stock_actual, stock_comprometido, stock_minimo, stock_recomendado };
+  const body = { nombre, precio_compra, margen, precio_venta, categoria, sku, ean, contenido, unidad, imagen, stock_actual, stock_comprometido, stock_minimo, stock_recomendado };
   let res;
   if (editandoId) {
     body.id = editandoId;
@@ -1652,7 +1670,7 @@ function agregarItemCompra() {
   // Poblar select de productos
   var sel = row.querySelector('select');
   productos.forEach(function(p) {
-    sel.innerHTML += '<option value="' + p.id + '" data-nombre="' + esc(p.nombre) + '" data-precio="' + p.precio + '">' + esc(p.nombre) + '</option>';
+    sel.innerHTML += '<option value="' + p.id + '" data-nombre="' + esc(p.nombre) + '" data-precio="' + (p.precio_venta ?? 0) + '">' + esc(p.nombre) + '</option>';
   });
 }
 

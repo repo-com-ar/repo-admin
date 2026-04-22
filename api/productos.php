@@ -3,18 +3,9 @@
  * API admin — Productos (CRUD)
  *
  * GET    /repo-admin/api/productos.php[?id={id}&categoria={cat}&q={texto}]
- *   Con ?id devuelve un único producto. Sin él lista con filtros opcionales.
- *   Campos: id, nombre, precio, categoria, emoji, imagen, unidad, peso_pieza, stock_actual, stock_comprometido, stock_minimo, stock_recomendado.
- *
- * POST   /repo-admin/api/productos.php
- *   Crea un producto. Body JSON: { nombre, categoria, precio?, emoji?, imagen?, unidad?, peso_pieza?, stock_actual?, stock_comprometido?, stock_minimo?, stock_recomendado? }
- *   El nombre se normaliza a Title Case con mb_convert_case.
- *
- * PUT    /repo-admin/api/productos.php
- *   Actualiza un producto existente. Body JSON con id + campos a modificar.
- *
+ * POST   /repo-admin/api/productos.php  — { nombre, categoria, precio?, sku?, ean?, contenido?, imagen?, unidad?, stock_* }
+ * PUT    /repo-admin/api/productos.php  — { id, ...campos }
  * DELETE /repo-admin/api/productos.php?id={id}
- *   Elimina el producto y borra su imagen de repo-media/productos/ si es local.
  */
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -26,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit; }
 require_once __DIR__ . '/../lib/auth_check.php';
 requireAuth();
 
-
 require_once __DIR__ . '/../../repo-api/config/db.php';
 
 try {
@@ -37,11 +27,28 @@ try {
     exit;
 }
 
+function normalizarProducto(array $p): array {
+    $p['sku']          = (int)($p['sku'] ?? 0);
+    $p['precio_compra'] = (float)($p['precio_compra'] ?? 0);
+    $p['margen']        = (float)($p['margen'] ?? 0);
+    $p['precio_venta']  = (float)($p['precio_venta'] ?? 0);
+    $p['contenido']     = $p['contenido'] ?? null;
+    $p['stock_actual']       = (int)($p['stock_actual'] ?? 1);
+    $p['stock_comprometido'] = (int)($p['stock_comprometido'] ?? 0);
+    $p['stock_minimo']       = (int)($p['stock_minimo'] ?? 0);
+    $p['stock_recomendado']  = (int)($p['stock_recomendado'] ?? 3);
+    $p['stock'] = $p['stock_actual'] > 0;
+    if (!empty($p['imagen']) && strpos($p['imagen'], 'http') !== 0) {
+        $p['imagen'] = 'https://media.repo.com.ar/productos/' . basename($p['imagen']);
+    }
+    return $p;
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
 
-    // ---- GET: listar (con filtros opcionales) ----
+    // ---- GET ----
     case 'GET':
         $cat = $_GET['categoria'] ?? 'todos';
         $q   = trim($_GET['q'] ?? '');
@@ -51,19 +58,7 @@ switch ($method) {
             $stmt = $pdo->prepare("SELECT * FROM productos WHERE id = ?");
             $stmt->execute([$id]);
             $item = $stmt->fetch();
-            if ($item) {
-                $item['precio'] = (float)$item['precio'];
-                $item['peso_pieza'] = isset($item['peso_pieza']) ? ($item['peso_pieza'] !== null ? (float)$item['peso_pieza'] : null) : null;
-                $item['stock_actual']      = (int)($item['stock_actual'] ?? 1);
-                $item['stock_comprometido'] = (int)($item['stock_comprometido'] ?? 0);
-                $item['stock_minimo']      = (int)($item['stock_minimo'] ?? 0);
-                $item['stock_recomendado'] = (int)($item['stock_recomendado'] ?? 3);
-                $item['stock'] = $item['stock_actual'] > 0;
-                if (!empty($item['imagen']) && strpos($item['imagen'], 'http') !== 0) {
-                    $item['imagen'] = 'https://media.repo.com.ar/productos/' . basename($item['imagen']);
-                }
-            }
-            echo json_encode(['ok' => true, 'data' => $item ?: null]);
+            echo json_encode(['ok' => true, 'data' => $item ? normalizarProducto($item) : null]);
             break;
         }
 
@@ -81,20 +76,7 @@ switch ($method) {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        $result = $stmt->fetchAll();
-
-        foreach ($result as &$p) {
-            $p['precio'] = (float)$p['precio'];
-            $p['peso_pieza'] = isset($p['peso_pieza']) ? ($p['peso_pieza'] !== null ? (float)$p['peso_pieza'] : null) : null;
-            $p['stock_actual']      = (int)($p['stock_actual'] ?? 1);
-            $p['stock_comprometido'] = (int)($p['stock_comprometido'] ?? 0);
-            $p['stock_minimo']      = (int)($p['stock_minimo'] ?? 0);
-            $p['stock_recomendado'] = (int)($p['stock_recomendado'] ?? 3);
-            $p['stock'] = $p['stock_actual'] > 0;
-            if (!empty($p['imagen']) && strpos($p['imagen'], 'http') !== 0) {
-                $p['imagen'] = 'https://media.repo.com.ar/productos/' . basename($p['imagen']);
-            }
-        }
+        $result = array_map('normalizarProducto', $stmt->fetchAll());
 
         echo json_encode(['ok' => true, 'data' => $result, 'total' => count($result)]);
         break;
@@ -108,7 +90,18 @@ switch ($method) {
             break;
         }
 
-        $nombreNorm = mb_convert_case(trim($body['nombre']), MB_CASE_TITLE, 'UTF-8');
+        $nombreNorm   = mb_convert_case(trim($body['nombre']), MB_CASE_TITLE, 'UTF-8');
+        $ean          = trim($body['ean'] ?? '');
+        $contenido    = trim($body['contenido'] ?? '');
+        $precio_compra = (float)($body['precio_compra'] ?? 0);
+        $margen        = (float)($body['margen'] ?? 0);
+
+        // SKU: usar el del formulario si se proporcionó, si no generar el siguiente
+        if (!empty($body['sku'])) {
+            $sku = (int)$body['sku'];
+        } else {
+            $sku = (int)$pdo->query("SELECT COALESCE(MAX(sku), 999) + 1 FROM productos")->fetchColumn();
+        }
 
         $stock_actual       = (int)($body['stock_actual'] ?? 1);
         $stock_comprometido = (int)($body['stock_comprometido'] ?? 0);
@@ -116,33 +109,41 @@ switch ($method) {
         $stock_recomendado  = (int)($body['stock_recomendado'] ?? 3);
 
         $stmt = $pdo->prepare("
-            INSERT INTO productos (nombre, precio, categoria, emoji, imagen, unidad, peso_pieza, stock_actual, stock_comprometido, stock_minimo, stock_recomendado)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO productos (sku, ean, nombre, precio_compra, margen, precio_venta, categoria, imagen, contenido, unidad, stock_actual, stock_comprometido, stock_minimo, stock_recomendado)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
+            $sku,
+            $ean,
             $nombreNorm,
-            (float)($body['precio'] ?? 0),
+            $precio_compra,
+            $margen,
+            (float)($body['precio_venta'] ?? 0),
             $body['categoria'],
-            $body['emoji'] ?? '📦',
             $body['imagen'] ?? '',
+            $contenido ?: null,
             $body['unidad'] ?? 'u',
-            ($body['peso_pieza'] ?? null) !== null && $body['peso_pieza'] !== '' ? (float)$body['peso_pieza'] : null,
             $stock_actual,
             $stock_comprometido,
             $stock_minimo,
             $stock_recomendado,
         ]);
 
+        $nuevoId = (int)$pdo->lastInsertId();
+
         $nuevo = [
-            'id'         => (int)$pdo->lastInsertId(),
-            'nombre'     => $nombreNorm,
-            'precio'     => (float)($body['precio'] ?? 0),
-            'categoria'  => $body['categoria'],
-            'emoji'      => $body['emoji'] ?? '📦',
-            'imagen'     => $body['imagen'] ?? '',
-            'unidad'     => $body['unidad'] ?? 'u',
-            'stock'      => $stock_actual > 0,
-            'peso_pieza' => ($body['peso_pieza'] ?? null) !== null && $body['peso_pieza'] !== '' ? (float)$body['peso_pieza'] : null,
+            'id'           => $nuevoId,
+            'sku'          => $sku,
+            'ean'          => $ean,
+            'nombre'       => $nombreNorm,
+            'precio_compra' => $precio_compra,
+            'margen'        => $margen,
+            'precio_venta'  => (float)($body['precio_venta'] ?? 0),
+            'categoria'    => $body['categoria'],
+            'imagen'       => $body['imagen'] ?? '',
+            'contenido'    => $contenido ?: null,
+            'unidad'       => $body['unidad'] ?? 'u',
+            'stock'        => $stock_actual > 0,
             'stock_actual'       => $stock_actual,
             'stock_comprometido' => $stock_comprometido,
             'stock_minimo'       => $stock_minimo,
@@ -163,7 +164,6 @@ switch ($method) {
             break;
         }
 
-        // Verificar que existe
         $stmt = $pdo->prepare("SELECT * FROM productos WHERE id = ?");
         $stmt->execute([$id]);
         $actual = $stmt->fetch();
@@ -175,30 +175,39 @@ switch ($method) {
         }
 
         $nombre    = mb_convert_case(trim($body['nombre'] ?? $actual['nombre']), MB_CASE_TITLE, 'UTF-8');
-        $precio    = (float)($body['precio'] ?? $actual['precio']);
-        $categoria = $body['categoria']      ?? $actual['categoria'];
-        $emoji     = $body['emoji']          ?? $actual['emoji'];
-        $imagen    = $body['imagen']         ?? $actual['imagen'];
-        $unidad    = $body['unidad']         ?? $actual['unidad'];
+        $precio_venta = (float)($body['precio_venta'] ?? $actual['precio_venta']);
+        $categoria = $body['categoria'] ?? $actual['categoria'];
+        $sku           = isset($body['sku']) && $body['sku'] !== '' ? (int)$body['sku'] : (int)($actual['sku'] ?? 0);
+        $ean           = isset($body['ean'])       ? trim($body['ean'])       : ($actual['ean'] ?? '');
+        $precio_compra = isset($body['precio_compra']) ? (float)$body['precio_compra'] : (float)($actual['precio_compra'] ?? 0);
+        $margen        = isset($body['margen'])    ? (float)$body['margen']    : (float)($actual['margen'] ?? 0);
+        $contenido     = isset($body['contenido']) ? (trim($body['contenido']) ?: null) : ($actual['contenido'] ?? null);
+        $imagen        = $body['imagen']  ?? $actual['imagen'];
+        $unidad        = $body['unidad']  ?? $actual['unidad'];
 
-        $peso_pieza = array_key_exists('peso_pieza', $body)
-            ? ($body['peso_pieza'] !== null && $body['peso_pieza'] !== '' ? (float)$body['peso_pieza'] : null)
-            : (isset($actual['peso_pieza']) ? $actual['peso_pieza'] : null);
         $stock_actual       = isset($body['stock_actual'])       ? (int)$body['stock_actual']       : (int)($actual['stock_actual'] ?? 1);
         $stock_comprometido = isset($body['stock_comprometido']) ? (int)$body['stock_comprometido'] : (int)($actual['stock_comprometido'] ?? 0);
         $stock_minimo       = isset($body['stock_minimo'])       ? (int)$body['stock_minimo']       : (int)($actual['stock_minimo'] ?? 0);
         $stock_recomendado  = isset($body['stock_recomendado'])  ? (int)$body['stock_recomendado']  : (int)($actual['stock_recomendado'] ?? 3);
 
         $stmt = $pdo->prepare("
-            UPDATE productos SET nombre=?, precio=?, categoria=?, emoji=?, imagen=?, unidad=?, peso_pieza=?, stock_actual=?, stock_comprometido=?, stock_minimo=?, stock_recomendado=?
+            UPDATE productos
+            SET nombre=?, precio_compra=?, margen=?, precio_venta=?, categoria=?, sku=?, ean=?, contenido=?, imagen=?, unidad=?,
+                stock_actual=?, stock_comprometido=?, stock_minimo=?, stock_recomendado=?
             WHERE id=?
         ");
-        $stmt->execute([$nombre, $precio, $categoria, $emoji, $imagen, $unidad, $peso_pieza, $stock_actual, $stock_comprometido, $stock_minimo, $stock_recomendado, $id]);
+        $stmt->execute([
+            $nombre, $precio_compra, $margen, $precio_venta, $categoria, $sku, $ean, $contenido, $imagen, $unidad,
+            $stock_actual, $stock_comprometido, $stock_minimo, $stock_recomendado,
+            $id,
+        ]);
 
         $actualizado = [
-            'id' => $id, 'nombre' => $nombre, 'precio' => $precio,
-            'categoria' => $categoria, 'emoji' => $emoji, 'imagen' => $imagen,
-            'unidad' => $unidad, 'stock' => $stock_actual > 0, 'peso_pieza' => $peso_pieza,
+            'id' => $id, 'sku' => $sku, 'ean' => $ean,
+            'nombre' => $nombre, 'precio_compra' => $precio_compra, 'margen' => $margen, 'precio_venta' => $precio_venta,
+            'categoria' => $categoria, 'imagen' => $imagen,
+            'contenido' => $contenido, 'unidad' => $unidad,
+            'stock' => $stock_actual > 0,
             'stock_actual'       => $stock_actual,
             'stock_comprometido' => $stock_comprometido,
             'stock_minimo'       => $stock_minimo,
@@ -217,7 +226,6 @@ switch ($method) {
             break;
         }
 
-        // Obtener imagen antes de eliminar
         $stmt = $pdo->prepare("SELECT imagen FROM productos WHERE id = ?");
         $stmt->execute([$id]);
         $producto = $stmt->fetch();
@@ -228,11 +236,9 @@ switch ($method) {
             break;
         }
 
-        // Eliminar registro
         $stmt = $pdo->prepare("DELETE FROM productos WHERE id = ?");
         $stmt->execute([$id]);
 
-        // Eliminar imagen local si existe en repo-media/productos/
         if (!empty($producto['imagen'])) {
             $mediaDir = __DIR__ . '/../../repo-media/productos/';
             $nombreArchivo = basename($producto['imagen']);
