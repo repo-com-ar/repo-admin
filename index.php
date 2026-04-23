@@ -132,6 +132,12 @@ $authUser = authUser();
       <!-- ========== SECCIÓN INICIO (Dashboard) ========== -->
       <div class="section" id="seccionInicio">
 
+        <div class="stats-bar" id="dashUsuariosStats">
+          <div class="stat-card dash-link" onclick="irSeccion('clientes')"><span class="stat-label">Usuarios en línea ahora</span><span class="stat-value green" id="dashUsrOnline">—</span></div>
+          <div class="stat-card dash-link" onclick="irSeccion('clientes')"><span class="stat-label">Usuarios activos hoy</span><span class="stat-value" style="color:#3b82f6" id="dashUsrActivos">—</span></div>
+          <div class="stat-card dash-link" onclick="irSeccion('clientes')"><span class="stat-label">Nuevos usuarios esta semana</span><span class="stat-value orange" id="dashUsrNuevos">—</span></div>
+        </div>
+
         <div class="stats-bar" id="dashStats">
           <div class="stat-card dash-link" onclick="irSeccion('productos')"><span class="stat-label">Productos</span><span class="stat-value orange" id="dashProd">—</span></div>
           <div class="stat-card dash-link" onclick="irSeccion('clientes')"><span class="stat-label">Clientes</span><span class="stat-value green" id="dashCli">—</span></div>

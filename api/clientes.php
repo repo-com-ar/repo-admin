@@ -42,6 +42,11 @@ try { $pdo->query("SELECT contrasena FROM clientes LIMIT 1"); } catch (Exception
     $pdo->exec("ALTER TABLE clientes ADD COLUMN contrasena VARCHAR(100) NOT NULL DEFAULT '' AFTER correo, ADD COLUMN clave VARCHAR(100) NOT NULL DEFAULT '' AFTER contrasena");
 }
 
+// Migración: agregar last_seen para tracking de actividad desde repo-app
+try { $pdo->query("SELECT last_seen FROM clientes LIMIT 1"); } catch (Exception $e) {
+    $pdo->exec("ALTER TABLE clientes ADD COLUMN last_seen DATETIME NULL DEFAULT NULL, ADD INDEX idx_last_seen (last_seen)");
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
@@ -82,13 +87,19 @@ switch ($method) {
         // Stats
         $totalClientes = $pdo->query("SELECT COUNT(*) FROM clientes")->fetchColumn();
         $conPedidos = $pdo->query("SELECT COUNT(DISTINCT cliente_id) FROM pedidos WHERE cliente_id IS NOT NULL")->fetchColumn();
+        $enLinea      = $pdo->query("SELECT COUNT(*) FROM clientes WHERE last_seen >= NOW() - INTERVAL 5 MINUTE")->fetchColumn();
+        $activosHoy   = $pdo->query("SELECT COUNT(*) FROM clientes WHERE last_seen >= CURDATE()")->fetchColumn();
+        $nuevosSemana = $pdo->query("SELECT COUNT(*) FROM clientes WHERE created_at >= NOW() - INTERVAL 7 DAY")->fetchColumn();
 
         echo json_encode([
             'ok' => true,
             'data' => $clientes,
             'stats' => [
-                'total' => (int)$totalClientes,
-                'con_pedidos' => (int)$conPedidos
+                'total'         => (int)$totalClientes,
+                'con_pedidos'   => (int)$conPedidos,
+                'en_linea'      => (int)$enLinea,
+                'activos_hoy'   => (int)$activosHoy,
+                'nuevos_semana' => (int)$nuevosSemana,
             ]
         ]);
         break;

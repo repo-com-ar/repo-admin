@@ -2627,7 +2627,12 @@ async function cargarDashboard() {
 
     // Stats cards
     if (rProd.ok)  document.getElementById('dashProd').textContent     = rProd.stats?.total ?? rProd.data?.length ?? '—';
-    if (rCli.ok)   document.getElementById('dashCli').textContent      = rCli.stats?.total ?? '—';
+    if (rCli.ok) {
+      document.getElementById('dashCli').textContent         = rCli.stats?.total         ?? '—';
+      document.getElementById('dashUsrOnline').textContent   = rCli.stats?.en_linea      ?? '—';
+      document.getElementById('dashUsrActivos').textContent  = rCli.stats?.activos_hoy   ?? '—';
+      document.getElementById('dashUsrNuevos').textContent   = rCli.stats?.nuevos_semana ?? '—';
+    }
     if (rPed.ok) {
       document.getElementById('dashPedTotal').textContent = rPed.stats?.total ?? '—';
       document.getElementById('dashPedHoy').textContent   = rPed.stats?.hoy ?? '—';
