@@ -1193,71 +1193,7 @@ function cerrarPedModal() {
 
 function imprimirTicket() {
   if (!pedidoActual) return;
-  var p = pedidoActual;
-  var fecha = p.fecha ? new Date(p.fecha).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : '';
-
-  var sep = '<div class="sep"></div>';
-
-  var itemsHtml = (p.items || []).map(function(it) {
-    var sub = Number(it.precio * (it.cantidad || 1)).toLocaleString('es-AR');
-    return '<tr>' +
-      '<td class="prod-nom">' + esc(it.nombre) + '</td>' +
-      '<td class="prod-cant">×' + (it.cantidad || 1) + '</td>' +
-      '<td class="prod-total">$' + sub + '</td>' +
-      '</tr>';
-  }).join('');
-
-  var secClienteHtml =
-    '<p><span class="lbl">Cliente:</span> ' + esc(p.cliente) + '</p>' +
-    (p.celular   ? '<p><span class="lbl">Celular:</span> '  + esc(p.celular)  + '</p>' : '') +
-    (p.correo    ? '<p><span class="lbl">Correo:</span> '   + esc(p.correo)   + '</p>' : '') +
-    (p.direccion ? '<p><span class="lbl">Domicilio:</span> '+ esc(p.direccion)+ '</p>' : '') +
-    (p.notas     ? '<p><span class="lbl">Notas:</span> <em>'+ esc(p.notas)   + '</em></p>' : '');
-
-  var secRepHtml = p.repartidor_nombre
-    ? sep +
-      '<p><span class="lbl">Repartidor:</span> ' + esc(p.repartidor_nombre) + '</p>' +
-      (p.repartidor_celular ? '<p><span class="lbl">Celular:</span> ' + esc(p.repartidor_celular) + '</p>' : '')
-    : '';
-
-  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
-    '<title>Ticket ' + esc(p.numero) + '</title>' +
-    '<style>' +
-      'body{font-family:monospace;font-size:13px;color:#000;margin:0;padding:16px;max-width:320px}' +
-      'h1{font-size:15px;text-align:center;margin:0 0 4px;text-transform:uppercase;letter-spacing:1px}' +
-      '.num{text-align:center;font-size:22px;font-weight:bold;letter-spacing:3px;margin:4px 0}' +
-      '.fecha{text-align:center;font-size:11px;color:#555;margin-bottom:10px}' +
-      '.sep{border-top:1px dashed #000;margin:10px 0}' +
-      'p{margin:3px 0;font-size:13px}' +
-      '.lbl{font-weight:bold}' +
-      'table.prod{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}' +
-      'table.prod td{padding:4px 2px;vertical-align:top}' +
-      'table.prod .prod-nom{width:60%}' +
-      'table.prod .prod-cant{text-align:center;white-space:nowrap}' +
-      'table.prod .prod-total{text-align:right;font-weight:600;white-space:nowrap}' +
-      'table.prod tr+tr td{border-top:1px dotted #bbb}' +
-      '.total-row{display:flex;justify-content:space-between;font-size:16px;font-weight:bold;' +
-        'margin-top:8px;border-top:2px solid #000;padding-top:8px}' +
-      '.footer{text-align:center;font-size:10px;color:#888;margin-top:16px}' +
-      '@media print{body{padding:0}}' +
-    '</style></head><body>' +
-    '<h1>Ticket de Pedido</h1>' +
-    '<div class="num">' + esc(p.numero) + '</div>' +
-    '<div class="fecha">' + fecha + '</div>' +
-    sep +
-    secClienteHtml +
-    secRepHtml +
-    sep +
-    '<table class="prod"><tbody>' + itemsHtml + '</tbody></table>' +
-    '<div class="total-row"><span>TOTAL</span><span>$' + Number(p.total).toLocaleString('es-AR') + '</span></div>' +
-    '<div class="footer">Gracias por su compra</div>' +
-    '</body></html>';
-
-  var win = window.open('', '_blank', 'width=400,height=650');
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  win.print();
+  window.open('ticket.php?id=' + pedidoActual.id, '_blank', 'width=400,height=650');
 }
 
 async function cambiarEstado(nuevoEstado) {
