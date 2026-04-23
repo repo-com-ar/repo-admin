@@ -282,8 +282,8 @@ $authUser = authUser();
             <span class="stat-value" style="color:#3b82f6" id="pedStatPendiente">—</span>
           </div>
           <div class="stat-card">
-            <span class="stat-label">Preparando</span>
-            <span class="stat-value" style="color:var(--warn)" id="pedStatPreparando">—</span>
+            <span class="stat-label">Preparación</span>
+            <span class="stat-value" style="color:var(--warn)" id="pedStatPreparacion">—</span>
           </div>
           <div class="stat-card">
             <span class="stat-label">Entregados</span>
@@ -302,9 +302,10 @@ $authUser = authUser();
             <select id="filterEstado" onchange="onFiltroEstado(this.value)">
               <option value="todos">Todos los estados</option>
               <option value="pendiente">⏳ Pendiente</option>
-              <option value="preparando">🔧 Preparando</option>
-              <option value="listo">✅ Listo</option>
-              <option value="entregado">🚚 Entregado</option>
+              <option value="preparacion">🔧 Preparación</option>
+              <option value="asignacion">📋 Asignación</option>
+              <option value="reparto">🛵 Reparto</option>
+              <option value="entregado">✅ Entregado</option>
               <option value="cancelado">❌ Cancelado</option>
             </select>
           </div>
@@ -1066,6 +1067,7 @@ $authUser = authUser();
     </div>
     <div class="modal-footer">
       <button class="btn btn-danger" onclick="eliminarPedido()" style="margin-right:auto">🗑️ Eliminar</button>
+      <button class="btn btn-secondary" onclick="imprimirTicket()">🖨️ Imprimir ticket</button>
       <button class="btn btn-ghost" onclick="cerrarPedModal()">Cerrar</button>
     </div>
   </div>

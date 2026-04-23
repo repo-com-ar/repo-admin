@@ -120,7 +120,7 @@ switch ($method) {
 
         $sql = "SELECT p.id, p.numero, p.cliente, p.correo, p.celular, p.direccion, p.notas, p.total, p.estado,
                        p.lat, p.lng, p.distancia_km, p.tiempo_min, p.created_at as fecha,
-                       p.repartidor_id, r.nombre AS repartidor_nombre
+                       p.repartidor_id, r.nombre AS repartidor_nombre, r.celular AS repartidor_celular
                 FROM pedidos p
                 LEFT JOIN repartidores r ON r.id = p.repartidor_id"
              . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '')
@@ -157,7 +157,7 @@ switch ($method) {
         $id     = isset($body['id'])     ? (int)$body['id']       : 0;
         $estado = isset($body['estado']) ? trim($body['estado'])  : '';
 
-        $estados_validos = ['pendiente', 'preparando', 'listo', 'entregado', 'cancelado'];
+        $estados_validos = ['pendiente', 'preparacion', 'asignacion', 'reparto', 'entregado', 'cancelado'];
 
         if (!$id || !in_array($estado, $estados_validos)) {
             http_response_code(400);
@@ -169,9 +169,16 @@ switch ($method) {
         $stmt->execute([$estado, $id]);
 
         if ($stmt->rowCount() === 0) {
-            http_response_code(404);
-            echo json_encode(['ok' => false, 'error' => 'Pedido no encontrado']);
-            break;
+            // rowCount=0 puede significar que el estado ya era el mismo (MySQL no cuenta filas sin cambio).
+            // Verificamos si el pedido existe para distinguir "no encontrado" de "ya tenía ese estado".
+            $check = $pdo->prepare("SELECT id FROM pedidos WHERE id = ?");
+            $check->execute([$id]);
+            if (!$check->fetch()) {
+                http_response_code(404);
+                echo json_encode(['ok' => false, 'error' => 'Pedido no encontrado']);
+                break;
+            }
+            // El pedido existe y ya tenía ese estado — responder éxito igualmente.
         }
 
         // Recalcular distancia al guardar
