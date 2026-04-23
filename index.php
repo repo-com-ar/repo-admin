@@ -1083,16 +1083,15 @@ $authUser = authUser();
 <div class="modal-backdrop" id="mapaBackdrop" onclick="if(event.target===this)cerrarMapaSelector()">
   <div class="modal" style="max-width:700px">
     <div class="modal-header">
-      <div class="modal-title">📍 Elegir ubicación del centro de distribución</div>
+      <div class="modal-title">📍 Elegir ubicación</div>
       <button class="btn btn-ghost" onclick="cerrarMapaSelector()">✕</button>
     </div>
     <div class="modal-body" style="padding:0">
       <div id="mapaSelector" style="height:420px;width:100%;border-radius:0 0 14px 14px"></div>
     </div>
-    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
-      <div style="flex:1;font-size:.82rem;color:var(--muted)" id="mapaCoords">Hacé clic en el mapa o arrastrá el marcador</div>
+    <div class="modal-footer" style="gap:8px">
       <button class="btn btn-ghost" onclick="cerrarMapaSelector()">Cancelar</button>
-      <button class="btn btn-primary" id="btnAceptarMapa" onclick="aceptarUbicacion()">Aceptar ubicación</button>
+      <button class="btn btn-primary" id="btnAceptarMapa" onclick="aceptarUbicacion()">Aceptar</button>
     </div>
   </div>
 </div>
@@ -1117,26 +1116,12 @@ $authUser = authUser();
       </div>
 
       <div class="ped-detail-section">
-        <div class="ped-detail-label">Dirección</div>
-        <div id="cliDetDireccion"></div>
-      </div>
-
-      <div class="ped-detail-section">
-        <div class="ped-detail-label">Ubicación GPS</div>
-        <div id="cliDetUbicacion"></div>
-      </div>
-
-      <div class="ped-detail-section">
-        <div class="ped-detail-label">Seguridad</div>
-        <div style="display:flex;gap:24px;flex-wrap:wrap">
-          <div>
-            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:2px">Contraseña</div>
-            <div id="cliDetContrasena" style="font-weight:600;font-family:monospace"></div>
-          </div>
-          <div>
-            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:2px">Clave</div>
-            <div id="cliDetClave" style="font-weight:600;font-family:monospace"></div>
-          </div>
+        <div class="ped-detail-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Direcciones</span>
+          <button class="btn btn-ghost" style="padding:2px 10px;font-size:.8rem" onclick="abrirDirModalAdmin(null)">+ Agregar</button>
+        </div>
+        <div id="cliDetDireccionesLista">
+          <div class="spinner-row" style="text-align:center;padding:12px"><div class="spin"></div></div>
         </div>
       </div>
 
@@ -1163,6 +1148,42 @@ $authUser = authUser();
   </div>
 </div>
 
+<!-- ===== Modal Editar/Crear Dirección ===== -->
+<div class="modal-backdrop" id="dirModalBackdrop" onclick="if(event.target===this)cerrarDirModalAdmin()">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title" id="dirModalTitulo">Nueva dirección</div>
+      <button class="btn btn-ghost" onclick="cerrarDirModalAdmin()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="dirEditId">
+      <div class="form-group">
+        <label>Etiqueta *</label>
+        <input type="text" id="dirEditEtiqueta" placeholder="Casa, Trabajo, ..." maxlength="50" value="Casa">
+      </div>
+      <div class="form-group">
+        <label>Dirección *</label>
+        <input type="text" id="dirEditDireccion" placeholder="Calle, número, piso/depto">
+      </div>
+      <div class="form-group">
+        <label>Ubicación en el mapa</label>
+        <div id="dirEditMapInfo" class="config-hint" style="margin-bottom:8px">Sin ubicación seleccionada.</div>
+        <button type="button" class="btn btn-ghost" onclick="abrirMapaSelector('direccion')">🗺️ Seleccionar en el mapa</button>
+      </div>
+      <div class="form-group" id="dirEditPrincipalWrap" style="display:none">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="dirEditPrincipal">
+          <span>Marcar como dirección principal</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarDirModalAdmin()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarDirAdmin()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Modal Editar Cliente ===== -->
 <div class="modal-backdrop" id="cliModalBackdrop" onclick="if(event.target===this)cerrarModalCliente()">
   <div class="modal" style="max-width:480px">
@@ -1184,23 +1205,8 @@ $authUser = authUser();
         <input type="tel" id="cliCelular" placeholder="Ej: 11 2345-6789">
       </div>
       <div class="form-group">
-        <label>Dirección</label>
-        <input type="text" id="cliDireccion" placeholder="Calle, número, piso/depto">
-      </div>
-      <div class="form-group">
-        <label>Ubicación en el mapa</label>
-        <div id="cliMapInfo" class="config-hint" style="margin-bottom:8px">Sin ubicación seleccionada.</div>
-        <button type="button" class="btn btn-ghost" onclick="abrirMapaSelector('cliente')">🗺️ Seleccionar en el mapa</button>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Contraseña</label>
-          <input type="text" id="cliContrasena" placeholder="Contraseña de acceso" autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label>Clave</label>
-          <input type="text" id="cliClave" placeholder="Clave secundaria" autocomplete="off">
-        </div>
+        <label>Contraseña</label>
+        <input type="text" id="cliContrasena" placeholder="Contraseña de acceso" autocomplete="off">
       </div>
     </div>
     <div class="modal-footer">

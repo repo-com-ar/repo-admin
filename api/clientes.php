@@ -37,15 +37,47 @@ try {
     exit;
 }
 
-// Migración: agregar contrasena y clave si no existen
+// Migración: asegurar columna contrasena en clientes
 try { $pdo->query("SELECT contrasena FROM clientes LIMIT 1"); } catch (Exception $e) {
-    $pdo->exec("ALTER TABLE clientes ADD COLUMN contrasena VARCHAR(100) NOT NULL DEFAULT '' AFTER correo, ADD COLUMN clave VARCHAR(100) NOT NULL DEFAULT '' AFTER contrasena");
+    $pdo->exec("ALTER TABLE clientes ADD COLUMN contrasena VARCHAR(100) NOT NULL DEFAULT '' AFTER correo");
 }
+
+// Migración: eliminar columna 'clave' de clientes si todavía existe (descontinuada)
+try { $pdo->query("SELECT clave FROM clientes LIMIT 1"); $pdo->exec("ALTER TABLE clientes DROP COLUMN clave"); } catch (Exception $e) { /* ya no existe */ }
 
 // Migración: agregar last_seen para tracking de actividad desde repo-app
 try { $pdo->query("SELECT last_seen FROM clientes LIMIT 1"); } catch (Exception $e) {
     $pdo->exec("ALTER TABLE clientes ADD COLUMN last_seen DATETIME NULL DEFAULT NULL, ADD INDEX idx_last_seen (last_seen)");
 }
+
+// Migración: datos de ubicación geocodificados desde Google Geocoding API
+try { $pdo->query("SELECT localidad FROM clientes LIMIT 1"); } catch (Exception $e) {
+    $pdo->exec("ALTER TABLE clientes
+        ADD COLUMN direccion_geo VARCHAR(255) NULL DEFAULT NULL,
+        ADD COLUMN localidad     VARCHAR(100) NULL DEFAULT NULL,
+        ADD COLUMN provincia     VARCHAR(100) NULL DEFAULT NULL,
+        ADD COLUMN pais          VARCHAR(100) NULL DEFAULT NULL");
+}
+
+// Tabla de direcciones múltiples por cliente
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS clientes_direcciones (
+        id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        cliente_id    INT UNSIGNED NOT NULL,
+        etiqueta      VARCHAR(50)  NOT NULL DEFAULT 'Casa',
+        direccion     VARCHAR(255) NULL,
+        lat           DECIMAL(10,7) NULL,
+        lng           DECIMAL(10,7) NULL,
+        direccion_geo VARCHAR(255) NULL,
+        localidad     VARCHAR(100) NULL,
+        provincia     VARCHAR(100) NULL,
+        pais          VARCHAR(100) NULL,
+        es_principal  TINYINT(1)   NOT NULL DEFAULT 0,
+        created_at    TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+        updated_at    TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_cliente_id (cliente_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -66,7 +98,7 @@ switch ($method) {
             $params[] = $like;
         }
 
-        $sql = "SELECT c.id, c.nombre, c.celular, c.direccion, c.correo, c.contrasena, c.clave, c.lat, c.lng, c.created_at,
+        $sql = "SELECT c.id, c.nombre, c.celular, c.direccion, c.correo, c.contrasena, c.lat, c.lng, c.created_at,
                        COUNT(p.id) as total_pedidos,
                        COALESCE(SUM(p.total), 0) as total_gastado,
                        MAX(p.created_at) as ultimo_pedido
@@ -137,10 +169,6 @@ switch ($method) {
         if (isset($body['contrasena'])) {
             $campos[] = 'contrasena = ?';
             $params[] = trim($body['contrasena']);
-        }
-        if (isset($body['clave'])) {
-            $campos[] = 'clave = ?';
-            $params[] = trim($body['clave']);
         }
         if (array_key_exists('lat', $body)) {
             $campos[] = 'lat = ?';

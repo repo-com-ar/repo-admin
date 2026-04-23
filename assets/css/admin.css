@@ -246,6 +246,38 @@ tbody tr:hover { background: var(--row-hover); }
 .modal-body  { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
 .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
 
+/* Direcciones (dentro de detalle de cliente) */
+.dir-card-admin {
+  background: var(--bg);
+  border: none; border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 8px;
+}
+.dir-card-admin-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .9rem; margin-bottom: 4px;
+}
+.dir-card-admin-dir   { font-size: .85rem; color: var(--text); }
+.dir-card-admin-lugar { font-size: .78rem; color: var(--text-secondary, var(--muted)); }
+.dir-card-admin-map   { margin-top: 4px; }
+.dir-card-admin-actions {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  margin-top: 8px; padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.btn-dir-text {
+  background: none; border: none; cursor: pointer;
+  color: var(--primary); font-size: .8rem; font-weight: 600;
+  padding: 0;
+}
+.btn-dir-text:hover { opacity: .8; }
+.dir-principal-badge-admin {
+  margin-left: auto;
+  font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  color: var(--primary);
+  border: 1px solid var(--primary); border-radius: 20px;
+  padding: 2px 8px;
+}
+
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-row-3 { grid-template-columns: repeat(3, 1fr); }
 .form-group { display: flex; flex-direction: column; gap: 5px; }

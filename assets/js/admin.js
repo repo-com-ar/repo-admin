@@ -1310,25 +1310,18 @@ function renderFilaCliente(c) {
 }
 
 /* ===== Modal detalle cliente ===== */
+var cliDetActualId    = null;
+var cliDetDirecciones = [];
+
 function abrirDetalleCliente(id) {
   var c = clientes.find(function(x) { return x.id === id; });
   if (!c) return;
+  cliDetActualId = id;
 
-  document.getElementById('cliDetNombre').textContent    = c.nombre || '—';
+  document.getElementById('cliDetNombre').textContent   = c.nombre || '—';
   document.getElementById('cliDetCelular').textContent  = c.celular || '—';
-  document.getElementById('cliDetCorreo').textContent    = c.correo || '—';
-  document.getElementById('cliDetDireccion').textContent = c.direccion || '—';
+  document.getElementById('cliDetCorreo').textContent   = c.correo || '—';
 
-  var ubiEl = document.getElementById('cliDetUbicacion');
-  if (c.lat && c.lng) {
-    ubiEl.innerHTML = '<a href="https://www.google.com/maps?q=' + c.lat + ',' + c.lng + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">📍 Ver en Google Maps</a>'
-      + ' <span style="color:var(--text-secondary);font-size:.8rem">(' + parseFloat(c.lat).toFixed(6) + ', ' + parseFloat(c.lng).toFixed(6) + ')</span>';
-  } else {
-    ubiEl.innerHTML = '<span style="color:var(--text-secondary)">Sin ubicación registrada</span>';
-  }
-
-  document.getElementById('cliDetContrasena').textContent = c.contrasena || '—';
-  document.getElementById('cliDetClave').textContent      = c.clave      || '—';
   document.getElementById('cliDetPedidos').textContent    = c.total_pedidos || 0;
   document.getElementById('cliDetGastado').textContent    = '$' + Number(c.total_gastado || 0).toLocaleString('es-AR');
   document.getElementById('cliDetUltimo').textContent     = c.ultimo_pedido
@@ -1341,10 +1334,190 @@ function abrirDetalleCliente(id) {
   };
 
   document.getElementById('cliDetBackdrop').classList.add('open');
+  cargarDireccionesAdmin(id);
 }
 
 function cerrarDetalleCliente() {
   document.getElementById('cliDetBackdrop').classList.remove('open');
+  cliDetActualId = null;
+  cliDetDirecciones = [];
+}
+
+/* ===== Direcciones del cliente (dentro del detalle) ===== */
+function iconoEtiquetaAdmin(etiqueta) {
+  var e = (etiqueta || '').toLowerCase();
+  if (e.indexOf('trabajo') >= 0 || e.indexOf('oficina') >= 0 || e.indexOf('lab') >= 0) return '💼';
+  if (e.indexOf('casa')    >= 0 || e.indexOf('hogar')   >= 0 || e.indexOf('depto') >= 0) return '🏠';
+  return '📍';
+}
+
+async function cargarDireccionesAdmin(clienteId) {
+  var cont = document.getElementById('cliDetDireccionesLista');
+  if (!cont) return;
+  cont.innerHTML = '<div class="spinner-row" style="text-align:center;padding:12px"><div class="spin"></div></div>';
+  try {
+    var r = await fetch('api/clientes_direcciones.php?cliente_id=' + clienteId);
+    var data = await r.json();
+    if (!data.ok) { cont.innerHTML = '<div style="color:var(--text-secondary)">Error al cargar direcciones</div>'; return; }
+    cliDetDirecciones = data.data || [];
+    renderDireccionesAdmin();
+  } catch (e) {
+    cont.innerHTML = '<div style="color:var(--text-secondary)">Error de conexión</div>';
+  }
+}
+
+function renderDireccionesAdmin() {
+  var cont = document.getElementById('cliDetDireccionesLista');
+  if (!cont) return;
+  if (!cliDetDirecciones.length) {
+    cont.innerHTML = '<div style="color:var(--text-secondary);padding:8px 0">Sin direcciones</div>';
+    return;
+  }
+  cont.innerHTML = cliDetDirecciones.map(function(d) {
+    var icon = iconoEtiquetaAdmin(d.etiqueta);
+    var badge = d.es_principal ? '<span class="dir-principal-badge-admin">Principal</span>' : '';
+    var lugar = [d.localidad, d.provincia].filter(Boolean).join(', ');
+    var mapsLink = (d.lat && d.lng)
+      ? '<a href="https://www.google.com/maps?q=' + d.lat + ',' + d.lng + '" target="_blank" rel="noopener" style="color:var(--primary);font-size:.8rem">📍 Ver en Maps</a>'
+      : '<span style="color:var(--text-secondary);font-size:.8rem">Sin ubicación</span>';
+    var btnPrin = !d.es_principal
+      ? '<button class="btn-dir-text" onclick="setPrincipalDirAdmin(' + d.id + ')">Marcar principal</button>'
+      : '';
+    return '<div class="dir-card-admin">' +
+      '<div class="dir-card-admin-head"><span>' + icon + '</span><strong>' + esc(d.etiqueta) + '</strong>' + badge + '</div>' +
+      '<div class="dir-card-admin-dir">' + esc(d.direccion || 'Sin dirección') + '</div>' +
+      (lugar ? '<div class="dir-card-admin-lugar">' + esc(lugar) + '</div>' : '') +
+      '<div class="dir-card-admin-map">' + mapsLink + '</div>' +
+      '<div class="dir-card-admin-actions">' +
+        btnPrin +
+        '<button class="btn-dir-text" onclick="abrirDirModalAdmin(' + d.id + ')">Editar</button>' +
+        '<button class="btn-dir-text" style="color:#dc2626" onclick="eliminarDirAdmin(' + d.id + ')">Eliminar</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ===== Modal editar/crear dirección (admin) ===== */
+var dirEditandoId = null;
+var dirEditMapLat = null;
+var dirEditMapLng = null;
+
+function abrirDirModalAdmin(id) {
+  if (!cliDetActualId) { showToast('Abrí primero un cliente', true); return; }
+  dirEditandoId = id || null;
+  var d = id ? cliDetDirecciones.find(function(x) { return x.id === id; }) : null;
+
+  document.getElementById('dirModalTitulo').textContent = d ? 'Editar dirección' : 'Nueva dirección';
+  document.getElementById('dirEditId').value        = d ? d.id : '';
+  document.getElementById('dirEditEtiqueta').value  = d ? (d.etiqueta || 'Casa') : 'Casa';
+  document.getElementById('dirEditDireccion').value = d ? (d.direccion || '') : '';
+
+  dirEditMapLat = d && d.lat != null ? parseFloat(d.lat) : null;
+  dirEditMapLng = d && d.lng != null ? parseFloat(d.lng) : null;
+  document.getElementById('dirEditMapInfo').innerHTML = (dirEditMapLat && dirEditMapLng)
+    ? '📍 <strong>' + dirEditMapLat.toFixed(6) + ', ' + dirEditMapLng.toFixed(6) + '</strong>'
+    : 'Sin ubicación seleccionada.';
+
+  var wrap = document.getElementById('dirEditPrincipalWrap');
+  var chk  = document.getElementById('dirEditPrincipal');
+  var otras = cliDetDirecciones.filter(function(x) { return x.id !== id; });
+  if (otras.length > 0) {
+    wrap.style.display = '';
+    chk.checked = d ? !!d.es_principal : false;
+  } else {
+    wrap.style.display = 'none';
+    chk.checked = false;
+  }
+
+  document.getElementById('dirModalBackdrop').classList.add('open');
+  document.getElementById('dirEditEtiqueta').focus();
+}
+
+function cerrarDirModalAdmin() {
+  document.getElementById('dirModalBackdrop').classList.remove('open');
+  dirEditandoId = null;
+  dirEditMapLat = null;
+  dirEditMapLng = null;
+}
+
+async function guardarDirAdmin() {
+  if (!cliDetActualId) return;
+  var etiqueta  = document.getElementById('dirEditEtiqueta').value.trim() || 'Casa';
+  var direccion = document.getElementById('dirEditDireccion').value.trim();
+  var principal = document.getElementById('dirEditPrincipal').checked;
+  if (!direccion) { showToast('Ingresá la dirección', true); return; }
+
+  var payload = {
+    etiqueta:     etiqueta,
+    direccion:    direccion,
+    lat:          dirEditMapLat,
+    lng:          dirEditMapLng,
+    es_principal: principal ? 1 : 0,
+  };
+
+  try {
+    var r, data;
+    if (dirEditandoId) {
+      payload.id = dirEditandoId;
+      r = await fetch('api/clientes_direcciones.php', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      payload.cliente_id = cliDetActualId;
+      r = await fetch('api/clientes_direcciones.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    }
+    data = await r.json();
+    if (data.ok) {
+      cerrarDirModalAdmin();
+      await cargarDireccionesAdmin(cliDetActualId);
+      showToast(dirEditandoId ? 'Dirección actualizada' : 'Dirección agregada');
+    } else {
+      showToast(data.error || 'Error al guardar', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+function eliminarDirAdmin(id) {
+  document.getElementById('confirmMsg').textContent = '¿Eliminás esta dirección?';
+  confirmCallback = async function() {
+    try {
+      var r = await fetch('api/clientes_direcciones.php?id=' + id, { method: 'DELETE' });
+      var data = await r.json();
+      if (data.ok) {
+        await cargarDireccionesAdmin(cliDetActualId);
+        showToast('Dirección eliminada');
+      } else {
+        showToast(data.error || 'Error', true);
+      }
+    } catch (e) {
+      showToast('Error de conexión', true);
+    }
+  };
+  document.getElementById('confirmBackdrop').classList.add('open');
+}
+
+async function setPrincipalDirAdmin(id) {
+  try {
+    var r = await fetch('api/clientes_direcciones.php', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, es_principal: 1 }),
+    });
+    var data = await r.json();
+    if (data.ok) {
+      await cargarDireccionesAdmin(cliDetActualId);
+      showToast('Dirección principal actualizada');
+    } else {
+      showToast(data.error || 'Error', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
 }
 
 /* ===== Modal editar cliente ===== */
@@ -1354,18 +1527,10 @@ function abrirEditarCliente(id) {
   var c = clientes.find(function(x) { return x.id === id; });
   if (!c) return;
   clienteEditandoId = id;
-  document.getElementById('cliNombre').value      = c.nombre      || '';
+  document.getElementById('cliNombre').value     = c.nombre     || '';
   document.getElementById('cliCelular').value    = c.celular    || '';
-  document.getElementById('cliCorreo').value      = c.correo      || '';
-  document.getElementById('cliDireccion').value   = c.direccion   || '';
-  document.getElementById('cliContrasena').value  = c.contrasena  || '';
-  document.getElementById('cliClave').value       = c.clave       || '';
-
-  cliMapLat = c.lat ? parseFloat(c.lat) : null;
-  cliMapLng = c.lng ? parseFloat(c.lng) : null;
-  document.getElementById('cliMapInfo').innerHTML = (cliMapLat && cliMapLng)
-    ? '📍 <strong>' + cliMapLat.toFixed(6) + ', ' + cliMapLng.toFixed(6) + '</strong> — <a href="https://www.google.com/maps?q=' + cliMapLat + ',' + cliMapLng + '" target="_blank" style="color:var(--primary)">Ver en Maps</a>'
-    : 'Sin ubicación seleccionada.';
+  document.getElementById('cliCorreo').value     = c.correo     || '';
+  document.getElementById('cliContrasena').value = c.contrasena || '';
 
   document.getElementById('cliModalBackdrop').classList.add('open');
   document.getElementById('cliNombre').focus();
@@ -1374,8 +1539,6 @@ function abrirEditarCliente(id) {
 function cerrarModalCliente() {
   document.getElementById('cliModalBackdrop').classList.remove('open');
   clienteEditandoId = null;
-  cliMapLat = null;
-  cliMapLng = null;
 }
 
 async function guardarCliente() {
@@ -1385,11 +1548,7 @@ async function guardarCliente() {
     nombre:      document.getElementById('cliNombre').value.trim(),
     celular:    document.getElementById('cliCelular').value.trim(),
     correo:      document.getElementById('cliCorreo').value.trim(),
-    direccion:   document.getElementById('cliDireccion').value.trim(),
     contrasena:  document.getElementById('cliContrasena').value.trim(),
-    clave:       document.getElementById('cliClave').value.trim(),
-    lat:         cliMapLat,
-    lng:         cliMapLng,
   };
   if (!body.nombre) { showToast('El nombre es obligatorio', true); return; }
   try {
@@ -1397,7 +1556,7 @@ async function guardarCliente() {
     var data = await res.json();
     if (data.ok) {
       var c = clientes.find(function(x) { return x.id === clienteEditandoId; });
-      if (c) { c.nombre = body.nombre; c.celular = body.celular; c.correo = body.correo; c.direccion = body.direccion; c.contrasena = body.contrasena; c.clave = body.clave; c.lat = body.lat; c.lng = body.lng; }
+      if (c) { c.nombre = body.nombre; c.celular = body.celular; c.correo = body.correo; c.contrasena = body.contrasena; }
       cerrarModalCliente();
       renderClientes();
       showToast('Cliente actualizado');
@@ -2229,13 +2388,25 @@ function abrirMapaSelector(context) {
   document.getElementById('mapaBackdrop').classList.add('open');
 
   setTimeout(function() {
-    var activeLat = mapaContext === 'cliente' ? cliMapLat : mapaContext === 'proveedor' ? provMapLat : mapaContext === 'repartidor' ? repMapLat : centroDistLat;
-    var activeLng = mapaContext === 'cliente' ? cliMapLng : mapaContext === 'proveedor' ? provMapLng : mapaContext === 'repartidor' ? repMapLng : centroDistLng;
+    var activeLat = mapaContext === 'direccion' ? dirEditMapLat
+                  : mapaContext === 'cliente'   ? cliMapLat
+                  : mapaContext === 'proveedor' ? provMapLat
+                  : mapaContext === 'repartidor'? repMapLat
+                  : centroDistLat;
+    var activeLng = mapaContext === 'direccion' ? dirEditMapLng
+                  : mapaContext === 'cliente'   ? cliMapLng
+                  : mapaContext === 'proveedor' ? provMapLng
+                  : mapaContext === 'repartidor'? repMapLng
+                  : centroDistLng;
     var defaultLat = activeLat || -31.5375;
     var defaultLng = activeLng || -68.5364;
     var center = { lat: defaultLat, lng: defaultLng };
 
-    var activeLat2 = mapaContext === 'cliente' ? cliMapLat : mapaContext === 'proveedor' ? provMapLat : mapaContext === 'repartidor' ? repMapLat : centroDistLat;
+    var activeLat2 = mapaContext === 'direccion' ? dirEditMapLat
+                   : mapaContext === 'cliente'   ? cliMapLat
+                   : mapaContext === 'proveedor' ? provMapLat
+                   : mapaContext === 'repartidor'? repMapLat
+                   : centroDistLat;
     mapaSelector = new google.maps.Map(document.getElementById('mapaSelector'), {
       center: center,
       zoom: activeLat2 ? 16 : 12,
@@ -2248,23 +2419,10 @@ function abrirMapaSelector(context) {
       gmpDraggable: true
     });
 
-    actualizarCoordsTxt(defaultLat, defaultLng);
-
-    mapaMarker.addListener('dragend', function() {
-      var pos = mapaMarker.position;
-      actualizarCoordsTxt(pos.lat(), pos.lng());
-    });
-
     mapaSelector.addListener('click', function(e) {
-      mapaMarker.setPosition(e.latLng);
-      actualizarCoordsTxt(e.latLng.lat(), e.latLng.lng());
+      mapaMarker.position = e.latLng;
     });
   }, 200);
-}
-
-function actualizarCoordsTxt(lat, lng) {
-  document.getElementById('mapaCoords').innerHTML =
-    '\ud83d\udccd <strong>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</strong>';
 }
 
 function cerrarMapaSelector() {
@@ -2275,31 +2433,43 @@ function cerrarMapaSelector() {
 
 function aceptarUbicacion() {
   if (!mapaMarker) return;
-  var pos = mapaMarker.getPosition();
-  if (mapaContext === 'cliente') {
-    cliMapLat = pos.lat();
-    cliMapLng = pos.lng();
+  // AdvancedMarkerElement expone .position (LatLng o LatLngLiteral). Normalizamos a números.
+  var raw = mapaMarker.position;
+  if (!raw) return;
+  var lat = (typeof raw.lat === 'function') ? raw.lat() : raw.lat;
+  var lng = (typeof raw.lng === 'function') ? raw.lng() : raw.lng;
+
+  if (mapaContext === 'direccion') {
+    dirEditMapLat = lat;
+    dirEditMapLng = lng;
+    document.getElementById('dirEditMapInfo').innerHTML =
+      '📍 <strong>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</strong>';
+    cerrarMapaSelector();
+    showToast('Ubicación seleccionada');
+  } else if (mapaContext === 'cliente') {
+    cliMapLat = lat;
+    cliMapLng = lng;
     document.getElementById('cliMapInfo').innerHTML =
       '📍 <strong>' + cliMapLat.toFixed(6) + ', ' + cliMapLng.toFixed(6) + '</strong>';
     cerrarMapaSelector();
     showToast('Ubicación del cliente seleccionada');
   } else if (mapaContext === 'proveedor') {
-    provMapLat = pos.lat();
-    provMapLng = pos.lng();
+    provMapLat = lat;
+    provMapLng = lng;
     document.getElementById('provMapInfo').innerHTML =
-      '📍 <strong>' + provMapLat.toFixed(6) + ', ' + provMapLng.toFixed(6) + '</strong>';
+      '📍 <strong>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</strong>';
     cerrarMapaSelector();
     showToast('Ubicación del proveedor seleccionada');
   } else if (mapaContext === 'repartidor') {
-    repMapLat = pos.lat();
-    repMapLng = pos.lng();
+    repMapLat = lat;
+    repMapLng = lng;
     document.getElementById('repMapInfo').innerHTML =
-      '📍 <strong>' + repMapLat.toFixed(6) + ', ' + repMapLng.toFixed(6) + '</strong>';
+      '📍 <strong>' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</strong>';
     cerrarMapaSelector();
     showToast('Ubicación del repartidor seleccionada');
   } else {
-    centroDistLat = pos.lat();
-    centroDistLng = pos.lng();
+    centroDistLat = lat;
+    centroDistLng = lng;
     cerrarMapaSelector();
     actualizarCentroInfo();
     showToast('Ubicaci\u00f3n seleccionada. Record\u00e1 guardar la configuraci\u00f3n.');
