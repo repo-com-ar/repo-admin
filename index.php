@@ -1342,13 +1342,13 @@ $authUser = authUser();
       </div>
 
       <div class="ped-detail-section">
-        <div class="ped-detail-label">Ubicación GPS</div>
-        <div id="repDetUbicacion"></div>
+        <div class="ped-detail-label">Seguimiento en tiempo real</div>
+        <div id="repDetSeguimiento"></div>
       </div>
 
       <div class="ped-detail-section">
-        <div class="ped-detail-label">Seguimiento en tiempo real</div>
-        <div id="repDetSeguimiento"></div>
+        <div class="ped-detail-label">Ubicación GPS</div>
+        <div id="repDetUbicacion"></div>
       </div>
 
     </div>

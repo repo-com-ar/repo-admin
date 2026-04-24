@@ -2049,7 +2049,7 @@ function formatEstadoRepartidor(r) {
   var fecha = ts.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   var hora  = ts.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
   return '<span style="color:var(--text-secondary)">⚪ Fuera de línea</span>' +
-         '<div style="font-size:.72rem;color:var(--text-secondary);margin-top:2px">Últ. vez: ' + fecha + ' ' + hora + 'hs</div>';
+         '<div style="font-size:.65rem;color:var(--text-secondary);opacity:.5;margin-top:2px">Últ. vez: ' + fecha + ' ' + hora + 'hs</div>';
 }
 
 function renderFilaRepartidor(r) {
