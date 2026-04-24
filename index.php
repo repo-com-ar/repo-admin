@@ -1105,17 +1105,26 @@ $authUser = authUser();
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
 
-      <div class="ped-detail-section">
-        <div class="ped-detail-label">Correo electrónico</div>
-        <div id="cliDetCorreo" style="font-weight:600"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div class="ped-detail-label" style="margin-bottom:2px">Correo</div>
+          <div id="cliDetCorreo" style="font-weight:600;font-size:.9rem;word-break:break-all"></div>
+        </div>
+        <div>
+          <div class="ped-detail-label" style="margin-bottom:2px">Celular</div>
+          <div id="cliDetCelular" style="font-weight:600;font-size:.9rem"></div>
+        </div>
+        <div>
+          <div class="ped-detail-label" style="margin-bottom:2px">Ubicación</div>
+          <div id="cliDetUbicacion" style="font-size:.9rem">—</div>
+        </div>
+        <div>
+          <div class="ped-detail-label" style="margin-bottom:2px">Última vez visto</div>
+          <div id="cliDetLastSeen" style="font-size:.9rem">—</div>
+        </div>
       </div>
 
-      <div class="ped-detail-section">
-        <div class="ped-detail-label">Celular</div>
-        <div id="cliDetCelular" style="font-weight:600"></div>
-      </div>
-
-      <div class="ped-detail-section">
+      <div class="ped-detail-section" style="margin-top:20px">
         <div class="ped-detail-label" style="display:flex;justify-content:space-between;align-items:center">
           <span>Direcciones</span>
           <button class="btn btn-ghost" style="padding:2px 10px;font-size:.8rem" onclick="abrirDirModalAdmin(null)">+ Agregar</button>

@@ -190,6 +190,7 @@ textarea { resize: vertical; min-height: 60px; }
 .stat-value.green  { color: var(--success); }
 .stat-value.orange { color: var(--primary); }
 .stat-value.red    { color: var(--danger);  }
+#cliDetBackdrop .stat-value { font-size: 1rem; }
 
 /* ===== Table card ===== */
 .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; overflow-y: hidden; }

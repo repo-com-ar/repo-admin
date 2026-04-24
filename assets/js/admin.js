@@ -1322,6 +1322,33 @@ function abrirDetalleCliente(id) {
   document.getElementById('cliDetCelular').textContent  = c.celular || '—';
   document.getElementById('cliDetCorreo').textContent   = c.correo || '—';
 
+  var ubicEl = document.getElementById('cliDetUbicacion');
+  ubicEl.style.color = '';
+  if (c.lat && c.lng) {
+    var mapsUrl = 'https://www.google.com/maps?q=' + c.lat + ',' + c.lng;
+    ubicEl.innerHTML =
+      '<a href="' + mapsUrl + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">📍 Ver última ubicación</a>';
+  } else {
+    ubicEl.textContent = 'Sin ubicación detectada';
+    ubicEl.style.color = 'var(--muted)';
+  }
+
+  var lastSeenEl = document.getElementById('cliDetLastSeen');
+  var lsRaw = (c.last_seen != null && String(c.last_seen).trim() !== '') ? String(c.last_seen).trim() : '';
+  if (lsRaw) {
+    var d = new Date(lsRaw.replace(' ', 'T'));
+    var formatted = isNaN(d.getTime())
+      ? lsRaw
+      : d.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12: false });
+    lastSeenEl.textContent = formatted;
+    lastSeenEl.style.color = '';
+    lastSeenEl.style.fontWeight = '600';
+  } else {
+    lastSeenEl.textContent = '—';
+    lastSeenEl.style.color = 'var(--muted)';
+    lastSeenEl.style.fontWeight = '';
+  }
+
   document.getElementById('cliDetPedidos').textContent    = c.total_pedidos || 0;
   document.getElementById('cliDetGastado').textContent    = '$' + Number(c.total_gastado || 0).toLocaleString('es-AR');
   document.getElementById('cliDetUltimo').textContent     = c.ultimo_pedido

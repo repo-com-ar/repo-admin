@@ -98,7 +98,7 @@ switch ($method) {
             $params[] = $like;
         }
 
-        $sql = "SELECT c.id, c.nombre, c.celular, c.direccion, c.correo, c.contrasena, c.lat, c.lng, c.created_at,
+        $sql = "SELECT c.id, c.nombre, c.celular, c.direccion, c.correo, c.contrasena, c.lat, c.lng, c.last_seen, c.created_at,
                        COUNT(p.id) as total_pedidos,
                        COALESCE(SUM(p.total), 0) as total_gastado,
                        MAX(p.created_at) as ultimo_pedido
