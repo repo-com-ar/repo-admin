@@ -262,6 +262,9 @@ $authUser = authUser();
             <h3 style="font-size:1rem;font-weight:600">Categorías</h3>
           </div>
           <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="subcatModal.abrir()">
+              + Nueva subcategoría
+            </button>
             <button class="btn btn-primary" onclick="catModal.abrir()">
               + Nueva categoría
             </button>
@@ -1000,7 +1003,7 @@ $authUser = authUser();
         <input type="text" id="catLabel" placeholder="ej: Fiambres">
       </div>
       <div class="form-row">
-        <div class="form-group">
+        <div class="form-group" id="catEmojiWrap">
           <label>Emoji *</label>
           <input type="text" id="catEmoji" placeholder="🥓" maxlength="4" style="font-size:1.4rem;text-align:center">
         </div>
@@ -1022,6 +1025,51 @@ $authUser = authUser();
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="catModal.cerrar()">Cancelar</button>
       <button class="btn btn-primary" onclick="catModal.guardar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Subcategoría ===== -->
+<div class="modal-backdrop" id="subcatModalBackdrop" onclick="if(event.target===this)subcatModal.cerrar()">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title" id="subcatModalTitle">Nueva subcategoría</div>
+      <button class="btn btn-ghost" onclick="subcatModal.cerrar()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Categoría padre *</label>
+        <select id="subcatParent"></select>
+        <small style="color:var(--muted);font-size:.72rem">Categoría raíz bajo la que se agrupa.</small>
+      </div>
+      <div class="form-group">
+        <label>ID (slug) *</label>
+        <input type="text" id="subcatId" placeholder="ej: fiambres" pattern="[a-z0-9_-]+" title="Solo minúsculas, números, guiones">
+        <small style="color:var(--muted);font-size:.72rem">Identificador único, sin espacios ni mayúsculas</small>
+      </div>
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" id="subcatLabel" placeholder="ej: Fiambres">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Orden</label>
+          <input type="number" id="subcatOrden" placeholder="1" min="0">
+        </div>
+        <div class="form-group" style="justify-content:flex-end">
+          <label>Activa</label>
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="subcatActiva" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="subcatModal.cerrar()">Cancelar</button>
+      <button class="btn btn-primary" onclick="subcatModal.guardar()">Guardar</button>
     </div>
   </div>
 </div>

@@ -896,28 +896,48 @@ function cerrarDetalleMensaje() {
 }
 
 /* ===== Categorías: Grid ===== */
+function renderCatCard(c, esSub) {
+  const emoji = esSub ? '' : `<div class="cat-card-emoji">${esc(c.emoji)}</div>`;
+  return `
+    <div class="cat-card ${c.activa === false ? 'cat-inactiva' : ''} ${esSub ? 'cat-card-sub' : ''}">
+      ${emoji}
+      <div class="cat-card-info">
+        <div class="cat-card-label">${esc(c.label)}</div>
+        <div class="cat-card-orden">orden: #${c.orden}</div>
+        <div class="cat-card-productos">productos: ${Number(c.productos || 0)}</div>
+      </div>
+      <div class="cat-card-actions">
+        <button class="btn-icon-sm" title="Editar" onclick="catModal.editar('${esc(c.id)}')">✏️</button>
+        <button class="btn-icon-sm" title="Eliminar" onclick="catModal.eliminar('${esc(c.id)}', '${esc(c.label)}')">🗑️</button>
+      </div>
+    </div>`;
+}
+
 function renderCatGrid() {
   const grid = document.getElementById('catGrid');
   if (!CATEGORIAS.length) {
     grid.innerHTML = '<div class="table-empty">No hay categorías cargadas</div>';
     return;
   }
-  grid.innerHTML = CATEGORIAS.map(c => `
-    <div class="cat-card ${c.activa === false ? 'cat-inactiva' : ''}">
-      <div class="cat-card-emoji">${esc(c.emoji)}</div>
-      <div class="cat-card-info">
-        <div class="cat-card-label">${esc(c.label)}</div>
-        <div class="cat-card-id">${esc(c.id)}</div>
+  const raices = CATEGORIAS.filter(c => !c.parent_id);
+  const hijosPor = {};
+  CATEGORIAS.filter(c => c.parent_id).forEach(c => {
+    (hijosPor[c.parent_id] = hijosPor[c.parent_id] || []).push(c);
+  });
+
+  grid.innerHTML = raices.map(r => {
+    const hijos = hijosPor[r.id] || [];
+    const subs = hijos.map(h => renderCatCard(h, true)).join('');
+    return `
+      <div class="cat-group">
+        ${renderCatCard(r, false)}
+        ${subs ? `<div class="cat-subgroup">${subs}</div>` : ''}
       </div>
-      <div class="cat-card-orden">#${c.orden}</div>
-      <div class="cat-card-actions">
-        <button class="btn-icon-sm" title="Editar" onclick="catModal.editar('${esc(c.id)}')">✏️</button>
-        <button class="btn-icon-sm" title="Eliminar" onclick="catModal.eliminar('${esc(c.id)}', '${esc(c.label)}')">🗑️</button>
-      </div>
-    </div>`).join('');
+    `;
+  }).join('');
 }
 
-/* ===== Categorías: Modal CRUD ===== */
+/* ===== Categorías: Modal CRUD (solo raíces) ===== */
 const catModal = {
   editandoId: null,
 
@@ -929,13 +949,16 @@ const catModal = {
     document.getElementById('catLabel').value = '';
     document.getElementById('catEmoji').value = '';
     document.getElementById('catActiva').checked = true;
-    document.getElementById('catOrden').value = CATEGORIAS.length + 1;
+    document.getElementById('catOrden').value = CATEGORIAS.filter(c => !c.parent_id).length + 1;
     document.getElementById('catModalBackdrop').classList.add('open');
   },
 
+  // Dispatcher: si es subcategoría, delega al modal correcto
   editar(id) {
     const cat = CATEGORIAS.find(c => c.id === id);
     if (!cat) return;
+    if (cat.parent_id) return subcatModal.editar(id);
+
     this.editandoId = id;
     document.getElementById('catModalTitle').textContent = 'Editar categoría';
     document.getElementById('catId').value = cat.id;
@@ -962,7 +985,8 @@ const catModal = {
     if (!label) { showToast('El nombre es obligatorio', true); return; }
     if (!emoji) { showToast('El emoji es obligatorio', true); return; }
 
-    const body = { id, label, emoji, activa, orden };
+    // Siempre raíz. En edición mandamos parent_id=null por si venía con padre previamente.
+    const body = { id, label, emoji, activa, orden, parent_id: null };
     let res;
 
     try {
@@ -1006,6 +1030,84 @@ const catModal = {
       }
     };
     document.getElementById('confirmBackdrop').classList.add('open');
+  },
+};
+
+/* ===== Subcategorías: Modal CRUD (siempre tienen padre, nunca emoji) ===== */
+const subcatModal = {
+  editandoId: null,
+
+  poblarParentSelect(preseleccionado) {
+    const sel = document.getElementById('subcatParent');
+    const raices = CATEGORIAS.filter(c => !c.parent_id);
+    if (!raices.length) {
+      sel.innerHTML = '<option value="">— Primero creá una categoría raíz —</option>';
+      return;
+    }
+    sel.innerHTML = raices.map(c => `<option value="${esc(c.id)}">${esc(c.emoji)} ${esc(c.label)}</option>`).join('');
+    if (preseleccionado) sel.value = preseleccionado;
+  },
+
+  abrir() {
+    const raices = CATEGORIAS.filter(c => !c.parent_id);
+    if (!raices.length) { showToast('Primero creá una categoría raíz', true); return; }
+    this.editandoId = null;
+    document.getElementById('subcatModalTitle').textContent = 'Nueva subcategoría';
+    document.getElementById('subcatId').value = '';
+    document.getElementById('subcatId').disabled = false;
+    document.getElementById('subcatLabel').value = '';
+    document.getElementById('subcatActiva').checked = true;
+    document.getElementById('subcatOrden').value = CATEGORIAS.filter(c => c.parent_id).length + 1;
+    this.poblarParentSelect(null);
+    document.getElementById('subcatModalBackdrop').classList.add('open');
+  },
+
+  editar(id) {
+    const cat = CATEGORIAS.find(c => c.id === id);
+    if (!cat) return;
+    this.editandoId = id;
+    document.getElementById('subcatModalTitle').textContent = 'Editar subcategoría';
+    document.getElementById('subcatId').value = cat.id;
+    document.getElementById('subcatId').disabled = true;
+    document.getElementById('subcatLabel').value = cat.label;
+    document.getElementById('subcatActiva').checked = cat.activa !== false;
+    document.getElementById('subcatOrden').value = cat.orden || 0;
+    this.poblarParentSelect(cat.parent_id);
+    document.getElementById('subcatModalBackdrop').classList.add('open');
+  },
+
+  cerrar() {
+    document.getElementById('subcatModalBackdrop').classList.remove('open');
+  },
+
+  async guardar() {
+    const id        = document.getElementById('subcatId').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const label     = document.getElementById('subcatLabel').value.trim();
+    const parent_id = document.getElementById('subcatParent').value;
+    const activa    = document.getElementById('subcatActiva').checked;
+    const orden     = parseInt(document.getElementById('subcatOrden').value) || 0;
+
+    if (!id)        { showToast('El ID es obligatorio', true); return; }
+    if (!label)     { showToast('El nombre es obligatorio', true); return; }
+    if (!parent_id) { showToast('Tenés que elegir una categoría padre', true); return; }
+
+    const body = { id, label, emoji: '', activa, orden, parent_id };
+    try {
+      const method = this.editandoId ? 'PUT' : 'POST';
+      const res = await fetch(CAT_API, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) {
+        this.cerrar();
+        showToast(this.editandoId ? 'Subcategoría actualizada' : 'Subcategoría creada');
+        await cargarCategorias();
+        poblarSelects();
+        renderCatGrid();
+      } else {
+        showToast(data.error || 'Error al guardar', true);
+      }
+    } catch (e) {
+      showToast('Error de conexión', true);
+    }
   },
 };
 

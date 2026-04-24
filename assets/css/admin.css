@@ -423,9 +423,28 @@ tbody tr:hover { background: var(--row-hover); }
 
 /* ===== Categorías Grid ===== */
 .cat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cat-subgroup {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  gap: 8px;
+  margin-left: 32px;
+  padding-left: 12px;
+  border-left: 2px dashed var(--border);
+}
+
+.cat-card-sub {
+  padding: 12px 14px;
 }
 
 .cat-card {
@@ -454,12 +473,18 @@ tbody tr:hover { background: var(--row-hover); }
 
 .cat-card-info { flex: 1; min-width: 0; }
 .cat-card-label { font-weight: 700; font-size: .95rem; color: var(--text); }
-.cat-card-id { font-size: .75rem; color: var(--muted); font-family: monospace; }
 
 .cat-card-orden {
   font-size: .75rem; color: var(--muted); font-weight: 600;
-  background: var(--bg); border-radius: 6px; padding: 2px 8px;
-  white-space: nowrap;
+  margin-top: 2px;
+}
+.cat-card-productos {
+  font-size: .75rem; color: var(--text); font-weight: 600;
+  margin-top: 2px;
+}
+.cat-card-actions {
+  display: flex; flex-direction: column; gap: 4px;
+  flex-shrink: 0;
 }
 
 .cat-card-actions { display: flex; gap: 2px; flex-shrink: 0; }
