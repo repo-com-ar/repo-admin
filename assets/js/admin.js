@@ -24,6 +24,7 @@ const REP_API = 'api/repartidores';
 const PROV_API = 'api/proveedores';
 const COMP_API = 'api/compras';
 const CART_API = 'api/carritos';
+const PAG_API  = 'api/pagos';
 
 let CATEGORIAS = [];
 let PROVEEDORES = [];
@@ -731,7 +732,8 @@ const NAV_GROUPS = {
   navGroupProductos: ['productos', 'categorias', 'inventarios'],
   navGroupVentas:    ['pedidos', 'clientes', 'carritos', 'repartidores'],
   navGroupCompras:   ['compras', 'proveedores'],
-  navGroupAdmin:     ['eventos', 'usuarios', 'suscriptores', 'config'],
+  navGroupFinanzas:  ['pagos'],
+  navGroupAdmin:     ['eventos', 'usuarios', 'suscriptores', 'config', 'parametros'],
 };
 
 function cambiarSeccion(seccion, navEl) {
@@ -815,6 +817,14 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionSuscriptores').style.display = '';
     topbar.textContent = 'Suscriptores a Notificaciones';
     cargarSuscriptores();
+  } else if (seccion === 'pagos') {
+    document.getElementById('seccionPagos').style.display = '';
+    topbar.textContent = 'Gestión de Pagos';
+    cargarPagos();
+  } else if (seccion === 'parametros') {
+    document.getElementById('seccionParametros').style.display = '';
+    topbar.textContent = 'Parámetros del sistema';
+    cargarParametros();
   }
 }
 
@@ -3693,3 +3703,236 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Escape') { cerrarModal(); catModal.cerrar(); cerrarPedModal(); cerrarMapaSelector(); cerrarConfirm(false); cerrarMsgModal(); cerrarDetalleMensaje(); cerrarDetalleCliente(); cerrarDetalleProducto(); cerrarDetalleProveedor(); cerrarDetalleEvento(); cerrarModalUsuario(); cerrarDetalleCarrito(); }
   });
 });
+
+/* ===== Pagos ===== */
+
+const METODOS_PAGO = {
+  efectivo:    { label: 'Efectivo',    emoji: '💵', color: '#22c55e' },
+  mercadopago: { label: 'MercadoPago', emoji: '💳', color: '#009ee3' },
+};
+
+const ESTADOS_PAGO = {
+  pendiente:   { label: 'Pendiente',   emoji: '⏳', color: '#f59e0b' },
+  aprobado:    { label: 'Aprobado',    emoji: '✅', color: '#22c55e' },
+  rechazado:   { label: 'Rechazado',   emoji: '❌', color: '#ef4444' },
+  reembolsado: { label: 'Reembolsado', emoji: '↩️', color: '#8b5cf6' },
+};
+
+var pagos = [];
+var filtroMetodoPago = 'todos';
+var filtroEstadoPago = 'todos';
+var filtroBusqPago   = '';
+var pagoSearchTimer  = null;
+
+function onSearchPago(val) {
+  clearTimeout(pagoSearchTimer);
+  pagoSearchTimer = setTimeout(function() { filtroBusqPago = val; cargarPagos(); }, 300);
+}
+function onFiltroMetodoPago(val) { filtroMetodoPago = val; cargarPagos(); }
+function onFiltroEstadoPago(val) { filtroEstadoPago = val; cargarPagos(); }
+
+async function cargarPagos() {
+  var params = [];
+  if (filtroMetodoPago && filtroMetodoPago !== 'todos') params.push('metodo=' + encodeURIComponent(filtroMetodoPago));
+  if (filtroEstadoPago && filtroEstadoPago !== 'todos') params.push('estado=' + encodeURIComponent(filtroEstadoPago));
+  if (filtroBusqPago) params.push('q=' + encodeURIComponent(filtroBusqPago));
+  var qs = params.length ? '?' + params.join('&') : '';
+
+  try {
+    var res  = await fetch(PAG_API + qs);
+    var data = await res.json();
+    if (data.ok) {
+      pagos = data.data || [];
+      renderPagosStats(data.stats || {});
+      renderPagos();
+    } else {
+      showToast(data.error || 'Error al cargar pagos', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión al cargar pagos', true);
+  }
+}
+
+function renderPagosStats(stats) {
+  var totalCant = 0, totalMonto = 0;
+  for (var k in stats) { totalCant += stats[k].cant; totalMonto += parseFloat(stats[k].monto || 0); }
+  document.getElementById('pagStatTotal').textContent    = totalCant;
+  document.getElementById('pagStatEfectivo').textContent = stats.efectivo    ? stats.efectivo.cant    : 0;
+  document.getElementById('pagStatMP').textContent       = stats.mercadopago ? stats.mercadopago.cant : 0;
+  document.getElementById('pagStatMonto').textContent    = '$' + totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+}
+
+/* ===== Parámetros ===== */
+
+const PARAM_API = 'api/parametros';
+var parametros = [];
+var paramBusqueda = '';
+var paramSearchTimer = null;
+
+function onSearchParametro(val) {
+  clearTimeout(paramSearchTimer);
+  paramSearchTimer = setTimeout(function() { paramBusqueda = val; renderParametros(); }, 200);
+}
+
+async function cargarParametros() {
+  try {
+    var res  = await fetch(PARAM_API);
+    var data = await res.json();
+    if (data.ok) {
+      parametros = data.data || [];
+      renderParametros();
+    } else {
+      showToast(data.error || 'Error al cargar parámetros', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión al cargar parámetros', true);
+  }
+}
+
+function renderParametros() {
+  var lista = document.getElementById('parametrosLista');
+  var filtrados = parametros;
+  if (paramBusqueda) {
+    var q = paramBusqueda.toLowerCase();
+    filtrados = parametros.filter(function(p) {
+      return p.clave.toLowerCase().includes(q) || p.valor.toLowerCase().includes(q);
+    });
+  }
+  if (!filtrados.length) {
+    lista.innerHTML = '<div class="table-empty">No hay parámetros para el filtro aplicado</div>';
+    return;
+  }
+  var rows = filtrados.map(function(p) {
+    var fecha = p.updated_at
+      ? new Date(p.updated_at).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+      : '—';
+    var valorDisplay = p.valor.length > 60 ? p.valor.substring(0, 60) + '…' : (p.valor || '<em style="color:var(--muted)">vacío</em>');
+    return '<tr id="param-row-' + encodeURIComponent(p.clave) + '">' +
+      '<td style="font-family:monospace;font-size:.85rem;white-space:nowrap">' + esc(p.clave) + '</td>' +
+      '<td id="param-val-' + encodeURIComponent(p.clave) + '" style="word-break:break-all">' + valorDisplay + '</td>' +
+      '<td style="white-space:nowrap;color:var(--muted);font-size:.8rem">' + fecha + '</td>' +
+      '<td style="white-space:nowrap;display:flex;gap:6px">' +
+        '<button class="btn btn-ghost" style="font-size:.8rem;padding:4px 10px" onclick="editarParametro(\'' + p.clave + '\')">✏️ Editar</button>' +
+        '<button class="btn btn-ghost" style="font-size:.8rem;padding:4px 10px;color:#ef4444" onclick="eliminarParametro(\'' + p.clave + '\')">🗑️</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  lista.innerHTML = '<div class="table-wrap"><table class="data-table">' +
+    '<thead><tr><th>Clave</th><th>Valor</th><th>Modificado</th><th></th></tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+    '</table></div>';
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function editarParametro(clave) {
+  var param = parametros.find(function(p) { return p.clave === clave; });
+  var valorActual = param ? param.valor : '';
+  var rowId = 'param-row-' + encodeURIComponent(clave);
+  var row = document.getElementById(rowId);
+  if (!row) return;
+  row.querySelector('td:nth-child(4)').innerHTML =
+    '<button class="btn btn-ghost" style="font-size:.8rem;padding:4px 10px" onclick="cargarParametros()">✕ Cancelar</button>';
+  var valCell = document.getElementById('param-val-' + encodeURIComponent(clave));
+  valCell.innerHTML =
+    '<input type="text" id="param-input-' + encodeURIComponent(clave) + '" ' +
+    'value="' + esc(valorActual) + '" ' +
+    'style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input,var(--surface));color:var(--text);font-size:.9rem" ' +
+    'onkeydown="if(event.key===\'Enter\')guardarParametro(\'' + clave + '\')">' +
+    '<button class="btn btn-primary" style="margin-top:6px;font-size:.8rem;padding:4px 12px" onclick="guardarParametro(\'' + clave + '\')">💾 Guardar</button>';
+  var input = document.getElementById('param-input-' + encodeURIComponent(clave));
+  if (input) { input.focus(); input.select(); }
+}
+
+async function guardarParametro(clave) {
+  var input = document.getElementById('param-input-' + encodeURIComponent(clave));
+  if (!input) return;
+  var nuevoValor = input.value;
+  try {
+    var res = await fetch(PARAM_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clave: clave, valor: nuevoValor }),
+    });
+    var data = await res.json();
+    if (data.ok) {
+      showToast('Parámetro guardado');
+      cargarParametros();
+    } else {
+      showToast(data.error || 'Error al guardar', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+function eliminarParametro(clave) {
+  document.getElementById('confirmMsg').textContent = '¿Eliminar el parámetro "' + clave + '"? Esta acción no se puede deshacer.';
+  confirmCallback = async function() {
+    try {
+      var res  = await fetch(PARAM_API + '?clave=' + encodeURIComponent(clave), { method: 'DELETE' });
+      var data = await res.json();
+      if (data.ok) {
+        showToast('Parámetro eliminado');
+        cargarParametros();
+      } else {
+        showToast(data.error || 'Error al eliminar', true);
+      }
+    } catch (e) {
+      showToast('Error de conexión', true);
+    }
+  };
+  document.getElementById('confirmBackdrop').classList.add('open');
+}
+
+function abrirNuevoParametro() {
+  var clave = prompt('Nombre de la clave (sin espacios, usar guión bajo):');
+  if (!clave) return;
+  clave = clave.trim().replace(/\s+/g, '_').toLowerCase();
+  if (!clave) return;
+  var existe = parametros.find(function(p) { return p.clave === clave; });
+  if (existe) { showToast('Esa clave ya existe', true); return; }
+  parametros.unshift({ clave: clave, valor: '', updated_at: null });
+  renderParametros();
+  editarParametro(clave, '');
+}
+
+function renderPagos() {
+  var lista = document.getElementById('pagosLista');
+  if (!pagos.length) {
+    lista.innerHTML = '<div class="table-empty">No hay pagos para los filtros aplicados</div>';
+    return;
+  }
+
+  var rows = pagos.map(function(p) {
+    var met   = METODOS_PAGO[p.metodo]  || { label: p.metodo,  emoji: '💰', color: '#64748b' };
+    var est   = ESTADOS_PAGO[p.estado]  || { label: p.estado,  emoji: '•',  color: '#64748b' };
+    var fecha = p.created_at ? new Date(p.created_at).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+    var mpInfo = '';
+    if (p.metodo === 'mercadopago' && p.mp_payment_id) {
+      mpInfo = '<br><small style="color:#64748b">ID: ' + p.mp_payment_id + '</small>';
+    }
+    return '<tr>' +
+      '<td>' + fecha + '</td>' +
+      '<td><a href="#" onclick="irSeccion(\'pedidos\')" style="color:var(--accent)">' + (p.numero_pedido || '#' + p.pedido_id) + '</a><br><small style="color:#64748b">' + (p.cliente || '') + '</small></td>' +
+      '<td><span style="color:' + met.color + '">' + met.emoji + ' ' + met.label + '</span>' + mpInfo + '</td>' +
+      '<td><span style="color:' + est.color + '">' + est.emoji + ' ' + est.label + '</span></td>' +
+      '<td style="text-align:right;font-weight:600">$' + parseFloat(p.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 }) + '</td>' +
+      '<td style="color:#64748b;font-size:.85rem">' + (p.recibido_por || '—') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  lista.innerHTML = '<div class="table-wrap"><table class="data-table">' +
+    '<thead><tr>' +
+      '<th>Fecha</th>' +
+      '<th>Pedido / Cliente</th>' +
+      '<th>Método</th>' +
+      '<th>Estado</th>' +
+      '<th style="text-align:right">Monto</th>' +
+      '<th>Recibido por</th>' +
+    '</tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+    '</table></div>';
+}

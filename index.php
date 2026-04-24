@@ -85,6 +85,18 @@ $authUser = authUser();
           </a>
         </div>
       </div>
+      <div class="nav-group-wrap open" id="navGroupFinanzas">
+        <a class="nav-item nav-group-toggle" href="#" onclick="toggleNavGroup('navGroupFinanzas');return false;">
+          <span class="nav-icon">💳</span> Finanzas
+          <span class="nav-group-arrow">+</span>
+        </a>
+        <div class="nav-sub">
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('pagos', this)" data-section="pagos">
+            <span class="nav-icon">💵</span> Pagos
+          </a>
+        </div>
+      </div>
+
       <div class="nav-group-wrap open" id="navGroupAdmin">
         <a class="nav-item nav-group-toggle" href="#" onclick="toggleNavGroup('navGroupAdmin');return false;">
           <span class="nav-icon">⚙️</span> Administración
@@ -105,6 +117,9 @@ $authUser = authUser();
           </a>
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('config', this)" data-section="config">
             <span class="nav-icon">⚙️</span> Configuración
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('parametros', this)" data-section="parametros">
+            <span class="nav-icon">🔧</span> Parámetros
           </a>
         </div>
       </div>
@@ -855,6 +870,74 @@ $authUser = authUser();
         </div>
 
       </div><!-- /seccionInventarios -->
+
+      <!-- ========== SECCIÓN PAGOS ========== -->
+      <div class="section" id="seccionPagos" style="display:none">
+
+        <div class="stats-bar">
+          <div class="stat-card">
+            <span class="stat-label">Total pagos</span>
+            <span class="stat-value orange" id="pagStatTotal">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Efectivo</span>
+            <span class="stat-value green" id="pagStatEfectivo">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">MercadoPago</span>
+            <span class="stat-value" style="color:#009ee3" id="pagStatMP">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Recaudado</span>
+            <span class="stat-value green" id="pagStatMonto">—</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar pedido, cliente..." oninput="onSearchPago(this.value)">
+            <select id="filterMetodoPago" onchange="onFiltroMetodoPago(this.value)">
+              <option value="todos">Todos los métodos</option>
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="mercadopago">💳 MercadoPago</option>
+            </select>
+            <select id="filterEstadoPago" onchange="onFiltroEstadoPago(this.value)">
+              <option value="todos">Todos los estados</option>
+              <option value="aprobado">✅ Aprobado</option>
+              <option value="pendiente">⏳ Pendiente</option>
+              <option value="rechazado">❌ Rechazado</option>
+              <option value="reembolsado">↩️ Reembolsado</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="cargarPagos()">🔄 Actualizar</button>
+          </div>
+        </div>
+
+        <div id="pagosLista">
+          <div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>
+        </div>
+
+      </div><!-- /seccionPagos -->
+
+      <!-- ========== SECCIÓN PARÁMETROS ========== -->
+      <div class="section" id="seccionParametros" style="display:none">
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar parámetro..." oninput="onSearchParametro(this.value)">
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="abrirNuevoParametro()">+ Nuevo parámetro</button>
+            <button class="btn btn-ghost" onclick="cargarParametros()">🔄 Actualizar</button>
+          </div>
+        </div>
+
+        <div id="parametrosLista">
+          <div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>
+        </div>
+
+      </div><!-- /seccionParametros -->
 
     </div><!-- /content -->
   </div><!-- /main -->
