@@ -731,7 +731,7 @@ const NAV_GROUPS = {
   navGroupProductos: ['productos', 'categorias', 'inventarios'],
   navGroupVentas:    ['pedidos', 'clientes', 'carritos', 'repartidores'],
   navGroupCompras:   ['compras', 'proveedores'],
-  navGroupAdmin:     ['eventos', 'usuarios', 'config'],
+  navGroupAdmin:     ['eventos', 'usuarios', 'suscriptores', 'config'],
 };
 
 function cambiarSeccion(seccion, navEl) {
@@ -811,6 +811,10 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionRepartidores').style.display = '';
     topbar.textContent = 'Gestión de Repartidores';
     cargarRepartidores();
+  } else if (seccion === 'suscriptores') {
+    document.getElementById('seccionSuscriptores').style.display = '';
+    topbar.textContent = 'Suscriptores a Notificaciones';
+    cargarSuscriptores();
   }
 }
 
@@ -2172,6 +2176,152 @@ function eliminarRepartidor(id, nombre) {
         cargarRepartidores();
       } else {
         showToast(data.error || 'Error al eliminar', true);
+      }
+    } catch (e) {
+      showToast('Error de conexión', true);
+    }
+  };
+  document.getElementById('confirmBackdrop').classList.add('open');
+}
+
+/* ===== Suscriptores (push notifications) ===== */
+const SUSC_API = 'api/suscriptores';
+var suscriptores = [];
+var suscSearchTimer = null;
+var filtroBusqSusc = '';
+var filtroActorType = '';
+
+function onSearchSuscriptor(val) {
+  clearTimeout(suscSearchTimer);
+  suscSearchTimer = setTimeout(function() { filtroBusqSusc = val; cargarSuscriptores(); }, 300);
+}
+
+function onFiltroActorType(val) {
+  filtroActorType = val;
+  cargarSuscriptores();
+}
+
+async function cargarSuscriptores() {
+  try {
+    var params = new URLSearchParams();
+    if (filtroBusqSusc)   params.set('q', filtroBusqSusc);
+    if (filtroActorType)  params.set('actor_type', filtroActorType);
+    var res  = await fetch(SUSC_API + '?' + params.toString());
+    var data = await res.json();
+    if (data.ok) {
+      suscriptores = data.data || [];
+      renderSuscriptores();
+      if (data.stats) {
+        document.getElementById('suscStatTotal').textContent       = data.stats.total;
+        document.getElementById('suscStatRepartidor').textContent  = data.stats.repartidor;
+        document.getElementById('suscStatCliente').textContent     = data.stats.cliente;
+        document.getElementById('suscStatUsuario').textContent     = data.stats.usuario;
+        document.getElementById('suscStatError').textContent       = data.stats.con_error;
+      }
+    } else {
+      showToast(data.error || 'Error al cargar suscriptores', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+function renderSuscriptores() {
+  var lista = document.getElementById('suscriptoresLista');
+  if (!suscriptores.length) {
+    lista.innerHTML = '<div class="table-empty">No hay suscripciones registradas todavía</div>';
+    return;
+  }
+  lista.innerHTML = '<div class="table-card"><table class="table"><thead><tr>' +
+    '<th>Tipo</th><th>Actor</th><th>Origen / Proveedor</th><th>Dispositivo</th><th>Registrado</th><th>Último uso</th><th></th>' +
+    '</tr></thead><tbody>' +
+    suscriptores.map(function(s) { return renderFilaSuscriptor(s); }).join('') +
+    '</tbody></table></div>';
+}
+
+function renderFilaSuscriptor(s) {
+  var tipoBadge = {
+    repartidor: '<span style="color:#3b82f6;font-weight:600">🛵 Repartidor</span>',
+    cliente:    '<span style="color:#22c55e;font-weight:600">🛒 Cliente</span>',
+    usuario:    '<span style="color:#8b5cf6;font-weight:600">👤 Usuario</span>',
+  }[s.actor_type] || esc(s.actor_type);
+
+  var nombre = s.actor_nombre ? esc(s.actor_nombre) : '<span style="color:var(--text-secondary)">#' + s.actor_id + '</span>';
+  var origen = s.origin ? esc(s.origin) : '<span style="color:var(--text-secondary)">—</span>';
+  var prov   = s.proveedor ? '<br><span style="color:var(--text-secondary);font-size:.8rem">' + esc(s.proveedor) + '</span>' : '';
+
+  var ua = s.user_agent || '';
+  var device = 'Desconocido';
+  if (/iPhone/i.test(ua))       device = '📱 iPhone';
+  else if (/iPad/i.test(ua))    device = '📱 iPad';
+  else if (/Android/i.test(ua)) device = '📱 Android';
+  else if (/Windows/i.test(ua)) device = '💻 Windows';
+  else if (/Macintosh/i.test(ua)) device = '💻 Mac';
+  else if (/Linux/i.test(ua))   device = '💻 Linux';
+
+  var fechaReg = s.created_at ? new Date(s.created_at.replace(' ', 'T')).toLocaleString('es-AR', { dateStyle:'short', timeStyle:'short' }) : '—';
+  var fechaUso = s.last_used_at ? new Date(s.last_used_at.replace(' ', 'T')).toLocaleString('es-AR', { dateStyle:'short', timeStyle:'short' }) : '<span style="color:var(--text-secondary)">nunca</span>';
+
+  var errHtml = s.last_error ? '<br><span style="color:#ef4444;font-size:.75rem" title="' + esc(s.last_error) + '">⚠ error reciente</span>' : '';
+
+  return '<tr>' +
+    '<td>' + tipoBadge + '</td>' +
+    '<td><strong>' + nombre + '</strong></td>' +
+    '<td>' + origen + prov + '</td>' +
+    '<td title="' + esc(ua) + '">' + device + errHtml + '</td>' +
+    '<td>' + fechaReg + '</td>' +
+    '<td>' + fechaUso + '</td>' +
+    '<td><div class="actions">' +
+      '<button class="btn-icon-sm" title="Enviar push de prueba" onclick="probarSuscriptor(' + s.id + ')">📨</button>' +
+      '<button class="btn-icon-sm" title="Eliminar suscripción" onclick="eliminarSuscriptor(' + s.id + ')">🗑️</button>' +
+    '</div></td>' +
+    '</tr>';
+}
+
+async function probarSuscriptor(id) {
+  try {
+    var res  = await fetch(SUSC_API + '?id=' + id + '&accion=probar', { method: 'POST' });
+    var raw  = await res.text();
+    var data;
+    try { data = JSON.parse(raw); }
+    catch (_) {
+      console.error('[probarSuscriptor] respuesta no-JSON:', raw);
+      showToast('Error del servidor (ver consola)', true);
+      return;
+    }
+    if (data.ok) {
+      var st = data.stats || {};
+      if (st.enviados > 0) {
+        showToast('✅ Push de prueba enviado');
+      } else if (st.muertos > 0) {
+        showToast('La suscripción estaba muerta y fue eliminada', true);
+        cargarSuscriptores();
+      } else {
+        showToast('No se pudo enviar — verificá la consola', true);
+      }
+    } else {
+      console.error('[probarSuscriptor] error:', data);
+      var msg = data.error || 'Error';
+      if (data.file)   msg += ' (' + data.file + ')';
+      if (data.status) msg += ' [HTTP ' + data.status + ']';
+      showToast(msg, true);
+    }
+  } catch (e) {
+    showToast('Error de conexión: ' + e.message, true);
+  }
+}
+
+function eliminarSuscriptor(id) {
+  document.getElementById('confirmMsg').textContent = '¿Eliminás esta suscripción? El usuario tendrá que volver a aceptar permisos en ese dispositivo.';
+  confirmCallback = async function() {
+    try {
+      var res  = await fetch(SUSC_API + '?id=' + id, { method: 'DELETE' });
+      var data = await res.json();
+      if (data.ok) {
+        showToast('Suscripción eliminada');
+        cargarSuscriptores();
+      } else {
+        showToast(data.error || 'Error', true);
       }
     } catch (e) {
       showToast('Error de conexión', true);

@@ -33,6 +33,7 @@ requireAuth();
 
 
 require_once __DIR__ . '/../../repo-api/config/db.php';
+require_once __DIR__ . '/../../repo-api/lib/pushservice.php';
 
 try {
     $pdo = getDB();
@@ -165,24 +166,51 @@ switch ($method) {
             break;
         }
 
+        // Leer estado anterior para detectar transiciones
+        $prev = $pdo->prepare("SELECT estado, numero, cliente, direccion, repartidor_id FROM pedidos WHERE id = ?");
+        $prev->execute([$id]);
+        $antes = $prev->fetch();
+        if (!$antes) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'error' => 'Pedido no encontrado']);
+            break;
+        }
+        $estadoAnterior = $antes['estado'];
+
         $stmt = $pdo->prepare("UPDATE pedidos SET estado = ? WHERE id = ?");
         $stmt->execute([$estado, $id]);
 
-        if ($stmt->rowCount() === 0) {
-            // rowCount=0 puede significar que el estado ya era el mismo (MySQL no cuenta filas sin cambio).
-            // Verificamos si el pedido existe para distinguir "no encontrado" de "ya tenía ese estado".
-            $check = $pdo->prepare("SELECT id FROM pedidos WHERE id = ?");
-            $check->execute([$id]);
-            if (!$check->fetch()) {
-                http_response_code(404);
-                echo json_encode(['ok' => false, 'error' => 'Pedido no encontrado']);
-                break;
-            }
-            // El pedido existe y ya tenía ese estado — responder éxito igualmente.
-        }
-
         // Recalcular distancia al guardar
         $distancia = calcularDistanciaPedido($pdo, $id);
+
+        // ── Disparos de push notifications (tiempo real) ──
+        if ($estadoAnterior !== $estado) {
+            if ($estado === 'asignacion') {
+                // Broadcast a todos los repartidores que hay un pedido nuevo para tomar
+                @push_enviar_a('repartidor', null,
+                    '🛒 Nuevo pedido para tomar',
+                    'Pedido ' . ($antes['numero'] ?? '') . ' — ' . ($antes['cliente'] ?? ''),
+                    [
+                        // Path relativo — el SW lo resuelve contra su propio scope
+                        'url' => './',
+                        'tag' => 'pedido-' . $id,
+                        'pedido_id' => $id,
+                    ]
+                );
+            } elseif ($estado === 'reparto' && !empty($antes['repartidor_id'])) {
+                // Avisar al repartidor asignado que el pedido está listo para retirar
+                @push_enviar_a('repartidor', (int)$antes['repartidor_id'],
+                    '📦 Pedido listo para retirar',
+                    'Pedido ' . ($antes['numero'] ?? '') . ' — ' . ($antes['direccion'] ?? ''),
+                    [
+                        'url' => './',
+                        'tag' => 'pedido-' . $id,
+                        'pedido_id' => $id,
+                        'requireInteraction' => true,
+                    ]
+                );
+            }
+        }
 
         echo json_encode(['ok' => true, 'id' => $id, 'estado' => $estado, 'distancia_km' => $distancia]);
         break;

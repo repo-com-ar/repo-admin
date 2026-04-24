@@ -99,6 +99,9 @@ $authUser = authUser();
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('usuarios', this)" data-section="usuarios">
             <span class="nav-icon">👤</span> Usuarios
           </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('suscriptores', this)" data-section="suscriptores">
+            <span class="nav-icon">🔔</span> Suscriptores
+          </a>
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('config', this)" data-section="config">
             <span class="nav-icon">⚙️</span> Configuración
           </a>
@@ -491,6 +494,53 @@ $authUser = authUser();
         </div>
 
       </div><!-- /seccionRepartidores -->
+
+      <!-- ========== SECCIÓN SUSCRIPTORES (push notifications) ========== -->
+      <div class="section" id="seccionSuscriptores" style="display:none">
+
+        <div class="stats-bar">
+          <div class="stat-card">
+            <span class="stat-label">Total suscripciones</span>
+            <span class="stat-value orange" id="suscStatTotal">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Repartidores</span>
+            <span class="stat-value" style="color:#3b82f6" id="suscStatRepartidor">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Clientes</span>
+            <span class="stat-value green" id="suscStatCliente">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Usuarios</span>
+            <span class="stat-value" style="color:#8b5cf6" id="suscStatUsuario">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Con errores</span>
+            <span class="stat-value red" id="suscStatError">—</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar por nombre, origen, dispositivo..." oninput="onSearchSuscriptor(this.value)">
+            <select id="filterActorType" onchange="onFiltroActorType(this.value)">
+              <option value="">Todos los tipos</option>
+              <option value="repartidor">🛵 Repartidores</option>
+              <option value="cliente">🛒 Clientes</option>
+              <option value="usuario">👤 Usuarios del sistema</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="cargarSuscriptores()">🔄 Actualizar</button>
+          </div>
+        </div>
+
+        <div id="suscriptoresLista">
+          <div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>
+        </div>
+
+      </div><!-- /seccionSuscriptores -->
 
       <!-- ========== SECCIÓN CARRITOS ========== -->
       <div class="section" id="seccionCarritos" style="display:none">
