@@ -237,7 +237,6 @@ $authUser = authUser();
               <th>#</th>
               <th>Imagen</th>
               <th>Nombre</th>
-              <th>Categoría</th>
               <th>P. Compra</th>
               <th>Margen</th>
               <th>P. Venta</th>
@@ -247,7 +246,7 @@ $authUser = authUser();
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr class="spinner-row"><td colspan="10"><div class="spin"></div></td></tr>
+            <tr class="spinner-row"><td colspan="9"><div class="spin"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -260,18 +259,18 @@ $authUser = authUser();
         <div class="toolbar">
           <div class="toolbar-left">
             <h3 style="font-size:1rem;font-weight:600">Categorías</h3>
+            <span class="cat-tree-hint">Hasta 3 niveles: categoría → subcategoría → subsubcategoría</span>
           </div>
           <div class="toolbar-right">
-            <button class="btn btn-ghost" onclick="subcatModal.abrir()">
-              + Nueva subcategoría
-            </button>
+            <button class="btn btn-ghost btn-sm" onclick="catTree.expandirTodo()">Expandir todo</button>
+            <button class="btn btn-ghost btn-sm" onclick="catTree.colapsarTodo()">Colapsar todo</button>
             <button class="btn btn-primary" onclick="catModal.abrir()">
               + Nueva categoría
             </button>
           </div>
         </div>
 
-        <div class="cat-grid" id="catGrid">
+        <div class="cat-tree" id="catTree">
           <div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>
         </div>
 
@@ -889,8 +888,15 @@ $authUser = authUser();
       </div>
 
       <div class="form-group">
-        <label>Categoría *</label>
-        <select id="fCategoria"><!-- poblado por JS --></select>
+        <label>
+          Categoría *
+          <span class="pct-warn-badge" id="fCatLegacyWarn" style="display:none">⚠ Nivel no válido</span>
+        </label>
+        <div class="prod-cat-display">
+          <input type="text" id="fCategoriaDisplay" readonly placeholder="Sin categoría — hacé clic para elegir" onclick="prodCatPicker.abrirModal()">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="prodCatPicker.abrirModal()">Cambiar</button>
+        </div>
+        <input type="hidden" id="fCategoria">
       </div>
 
       <div class="form-group">
@@ -985,14 +991,41 @@ $authUser = authUser();
   
 </div>
 
-<!-- ===== Modal Categoría ===== -->
+<!-- ===== Modal selector de categoría para productos (árbol) ===== -->
+<div class="modal-backdrop" id="prodCatModalBackdrop" onclick="if(event.target===this)prodCatPicker.cerrarModal()">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Elegir categoría</div>
+      <button class="btn btn-ghost" onclick="prodCatPicker.cerrarModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="prod-cat-crumb">
+        <span style="color:var(--muted);font-size:.78rem">Selección:</span>
+        <span id="prodCatSelectedPath" style="font-size:.88rem;font-weight:600;color:var(--muted)">— Sin seleccionar —</span>
+      </div>
+      <div class="prod-cat-tree" id="prodCatTree"></div>
+      <small id="fCatPickerHint" style="display:block;margin-top:10px;color:var(--muted);font-size:.74rem">Expandí el árbol y elegí una subsubcategoría (nivel 3).</small>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="prodCatPicker.cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" id="prodCatAceptarBtn" onclick="prodCatPicker.aceptar()" disabled>Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Categoría (unificado: raíz / sub / subsub) ===== -->
 <div class="modal-backdrop" id="catModalBackdrop" onclick="if(event.target===this)catModal.cerrar()">
-  <div class="modal" style="max-width:420px">
+  <div class="modal" style="max-width:460px">
     <div class="modal-header">
       <div class="modal-title" id="catModalTitle">Nueva categoría</div>
       <button class="btn btn-ghost" onclick="catModal.cerrar()">✕</button>
     </div>
     <div class="modal-body">
+      <div class="form-group">
+        <label>Padre</label>
+        <select id="catParent"></select>
+        <small style="color:var(--muted);font-size:.72rem">Vacío = categoría raíz. Hasta 3 niveles.</small>
+      </div>
       <div class="form-group">
         <label>ID (slug) *</label>
         <input type="text" id="catId" placeholder="ej: fiambres" pattern="[a-z0-9_-]+" title="Solo minúsculas, números, guiones">
@@ -1003,9 +1036,13 @@ $authUser = authUser();
         <input type="text" id="catLabel" placeholder="ej: Fiambres">
       </div>
       <div class="form-row">
-        <div class="form-group" id="catEmojiWrap">
-          <label>Emoji *</label>
+        <div class="form-group">
+          <label>Emoji</label>
           <input type="text" id="catEmoji" placeholder="🥓" maxlength="4" style="font-size:1.4rem;text-align:center">
+        </div>
+        <div class="form-group">
+          <label>Orden</label>
+          <input type="number" id="catOrden" placeholder="1" min="0">
         </div>
         <div class="form-group" style="justify-content:flex-end">
           <label>Activa</label>
@@ -1017,59 +1054,10 @@ $authUser = authUser();
           </div>
         </div>
       </div>
-      <div class="form-group">
-        <label>Orden</label>
-        <input type="number" id="catOrden" placeholder="1" min="0">
-      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="catModal.cerrar()">Cancelar</button>
       <button class="btn btn-primary" onclick="catModal.guardar()">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Modal Subcategoría ===== -->
-<div class="modal-backdrop" id="subcatModalBackdrop" onclick="if(event.target===this)subcatModal.cerrar()">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-header">
-      <div class="modal-title" id="subcatModalTitle">Nueva subcategoría</div>
-      <button class="btn btn-ghost" onclick="subcatModal.cerrar()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Categoría padre *</label>
-        <select id="subcatParent"></select>
-        <small style="color:var(--muted);font-size:.72rem">Categoría raíz bajo la que se agrupa.</small>
-      </div>
-      <div class="form-group">
-        <label>ID (slug) *</label>
-        <input type="text" id="subcatId" placeholder="ej: fiambres" pattern="[a-z0-9_-]+" title="Solo minúsculas, números, guiones">
-        <small style="color:var(--muted);font-size:.72rem">Identificador único, sin espacios ni mayúsculas</small>
-      </div>
-      <div class="form-group">
-        <label>Nombre *</label>
-        <input type="text" id="subcatLabel" placeholder="ej: Fiambres">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Orden</label>
-          <input type="number" id="subcatOrden" placeholder="1" min="0">
-        </div>
-        <div class="form-group" style="justify-content:flex-end">
-          <label>Activa</label>
-          <div class="toggle-row">
-            <label class="toggle">
-              <input type="checkbox" id="subcatActiva" checked>
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="subcatModal.cerrar()">Cancelar</button>
-      <button class="btn btn-primary" onclick="subcatModal.guardar()">Guardar</button>
     </div>
   </div>
 </div>

@@ -27,6 +27,20 @@ try {
     exit;
 }
 
+/**
+ * Devuelve true si $catId existe y es una subsubcategoría (nivel 2: su padre
+ * tiene padre). Todos los productos deben asignarse a una categoría de este nivel.
+ */
+function categoriaEsNivel2(PDO $pdo, string $catId): bool {
+    $stmt = $pdo->prepare("SELECT parent_id FROM categorias WHERE id = ?");
+    $stmt->execute([$catId]);
+    $row = $stmt->fetch();
+    if (!$row || $row['parent_id'] === null) return false;
+    $stmt->execute([$row['parent_id']]);
+    $row2 = $stmt->fetch();
+    return $row2 && $row2['parent_id'] !== null;
+}
+
 function normalizarProducto(array $p): array {
     $p['sku']          = (int)($p['sku'] ?? 0);
     $p['precio_compra'] = (float)($p['precio_compra'] ?? 0);
@@ -88,6 +102,11 @@ switch ($method) {
         if (!$body || empty($body['nombre']) || empty($body['categoria'])) {
             http_response_code(400);
             echo json_encode(['ok' => false, 'error' => 'Nombre y categoría son obligatorios']);
+            break;
+        }
+        if (!categoriaEsNivel2($pdo, (string)$body['categoria'])) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'El producto debe asociarse a una subsubcategoría (nivel 3)']);
             break;
         }
 
@@ -181,6 +200,16 @@ switch ($method) {
         $nombre    = mb_convert_case(trim($body['nombre'] ?? $actual['nombre']), MB_CASE_TITLE, 'UTF-8');
         $precio_venta = (float)($body['precio_venta'] ?? $actual['precio_venta']);
         $categoria = $body['categoria'] ?? $actual['categoria'];
+        // Solo validamos el nivel si la categoría cambia en este PUT (datos
+        // heredados pueden estar en niveles 0/1 y no queremos bloquear ediciones
+        // que no tocan la categoría).
+        if (array_key_exists('categoria', $body) && $categoria !== $actual['categoria']) {
+            if (!$categoria || !categoriaEsNivel2($pdo, (string)$categoria)) {
+                http_response_code(400);
+                echo json_encode(['ok' => false, 'error' => 'El producto debe asociarse a una subsubcategoría (nivel 3)']);
+                break;
+            }
+        }
         $sku           = isset($body['sku']) && $body['sku'] !== '' ? (int)$body['sku'] : (int)($actual['sku'] ?? 0);
         $ean           = isset($body['ean'])       ? trim($body['ean'])       : ($actual['ean'] ?? '');
         $precio_compra = isset($body['precio_compra']) ? (float)$body['precio_compra'] : (float)($actual['precio_compra'] ?? 0);

@@ -1,9 +1,12 @@
 <?php
 /**
- * API admin — Categorías (CRUD) con 1 nivel de jerarquía.
+ * API admin — Categorías (CRUD) con hasta 3 niveles de jerarquía.
  *
- * Modelo: raíces (parent_id NULL) agrupan subcategorías (parent_id = id de raíz).
- * No se permiten sub-subcategorías.
+ * Modelo:
+ *   - Nivel 0 (raíz):             parent_id IS NULL
+ *   - Nivel 1 (subcategoría):     parent_id = id de una raíz
+ *   - Nivel 2 (subsubcategoría):  parent_id = id de una subcategoría
+ * Profundidad máxima: 2 (tres niveles). No se aceptan descendientes más profundos.
  *
  * GET    /repo-admin/api/categorias.php[?todas=1]
  *   Lista las categorías. Sin ?todas solo devuelve las activas.
@@ -15,7 +18,7 @@
  *   Actualiza. Body JSON: { id, label?, emoji?, imagen?, orden?, activa?, parent_id? }
  *
  * DELETE /repo-admin/api/categorias.php?id={id}
- *   Elimina. Falla si tiene productos o subcategorías.
+ *   Elimina. Falla si tiene productos o descendientes.
  */
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -44,17 +47,71 @@ try { $pdo->query("SELECT parent_id FROM categorias LIMIT 1"); } catch (Exceptio
 }
 
 /**
- * Valida que $parentId sea un ID de una categoría raíz existente.
- * Devuelve null si es válido o no se setea; devuelve string de error si es inválido.
+ * Devuelve la profundidad de la categoría:
+ *   0 = raíz,  1 = subcategoría,  2 = subsubcategoría.
+ * Si no existe devuelve -1.
+ */
+function depthOf(PDO $pdo, string $id): int {
+    $stmt = $pdo->prepare("SELECT parent_id FROM categorias WHERE id = ?");
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
+    if (!$row) return -1;
+    if ($row['parent_id'] === null) return 0;
+    $parent = $row['parent_id'];
+    $stmt->execute([$parent]);
+    $row2 = $stmt->fetch();
+    if (!$row2 || $row2['parent_id'] === null) return 1;
+    return 2;
+}
+
+/**
+ * Profundidad máxima del subárbol de $id relativa a $id (0 si no tiene hijos,
+ * 1 si tiene hijos directos, 2 si tiene nietos). No evalúa más allá porque
+ * el modelo sólo admite 3 niveles.
+ */
+function maxSubtreeDepth(PDO $pdo, string $id): int {
+    $stmt = $pdo->prepare("SELECT id FROM categorias WHERE parent_id = ?");
+    $stmt->execute([$id]);
+    $hijos = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    if (!$hijos) return 0;
+    $ph = implode(',', array_fill(0, count($hijos), '?'));
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM categorias WHERE parent_id IN ($ph)");
+    $stmt->execute($hijos);
+    return ((int)$stmt->fetchColumn() > 0) ? 2 : 1;
+}
+
+/**
+ * Valida que $parentId sea un padre admisible para la categoría $idPropio.
+ * - Permite hasta 3 niveles (parent puede ser raíz o subcategoría).
+ * - Si $idPropio tiene descendientes, los niveles resultantes no deben pasar de 2.
+ * Devuelve null si es válido o string de error.
  */
 function validarParentId(PDO $pdo, ?string $parentId, ?string $idPropio = null): ?string {
     if ($parentId === null || $parentId === '') return null;
     if ($idPropio !== null && $parentId === $idPropio) return 'Una categoría no puede ser su propio padre';
-    $stmt = $pdo->prepare("SELECT parent_id FROM categorias WHERE id = ?");
-    $stmt->execute([$parentId]);
-    $row = $stmt->fetch();
-    if (!$row) return 'La categoría padre no existe';
-    if ($row['parent_id'] !== null) return 'Solo se permite 1 nivel: el padre debe ser una categoría raíz';
+
+    $dp = depthOf($pdo, $parentId);
+    if ($dp === -1) return 'La categoría padre no existe';
+    if ($dp >= 2)  return 'Solo se permiten 3 niveles: el padre no puede ser una subsubcategoría';
+
+    if ($idPropio !== null) {
+        // Evitar ciclos: el padre no puede ser descendiente actual de $idPropio.
+        $cursor = $parentId;
+        for ($i = 0; $i < 3 && $cursor !== null; $i++) {
+            $stmt = $pdo->prepare("SELECT parent_id FROM categorias WHERE id = ?");
+            $stmt->execute([$cursor]);
+            $row = $stmt->fetch();
+            if (!$row) break;
+            if ($row['parent_id'] === $idPropio) return 'No se puede mover: crearía un ciclo';
+            $cursor = $row['parent_id'];
+        }
+        // Verificar que el subárbol propio entre en el margen restante (2 - ($dp+1)).
+        $sub = maxSubtreeDepth($pdo, $idPropio);
+        $margen = 2 - ($dp + 1);
+        if ($sub > $margen) {
+            return 'No se puede mover: esta categoría tiene descendientes que excederían los 3 niveles bajo ese padre';
+        }
+    }
     return null;
 }
 
@@ -173,16 +230,6 @@ switch ($method) {
                 echo json_encode(['ok' => false, 'error' => $errParent]);
                 break;
             }
-            // Si esta categoría tiene hijos, no puede convertirse en subcategoría
-            if ($parentId !== null) {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM categorias WHERE parent_id = ?");
-                $stmt->execute([$id]);
-                if ((int)$stmt->fetchColumn() > 0) {
-                    http_response_code(400);
-                    echo json_encode(['ok' => false, 'error' => 'Esta categoría tiene subcategorías; no puede convertirse en subcategoría']);
-                    break;
-                }
-            }
         } else {
             $parentId = $actual['parent_id'];
         }
@@ -217,13 +264,13 @@ switch ($method) {
             break;
         }
 
-        // Verificar si tiene subcategorías
+        // Verificar si tiene descendientes directos
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM categorias WHERE parent_id = ?");
         $stmt->execute([$id]);
         $subs = (int)$stmt->fetchColumn();
         if ($subs > 0) {
             http_response_code(409);
-            echo json_encode(['ok' => false, 'error' => "No se puede eliminar: tiene {$subs} subcategoría(s)"]);
+            echo json_encode(['ok' => false, 'error' => "No se puede eliminar: tiene {$subs} subcategoría(s) directa(s)"]);
             break;
         }
 
