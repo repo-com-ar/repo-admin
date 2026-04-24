@@ -2009,7 +2009,7 @@ function onSearchRepartidor(val) {
 async function cargarRepartidores() {
   try {
     var url = REP_API + '?q=' + encodeURIComponent(filtroBusqRep);
-    var res = await fetch(url);
+    var res = await fetch(url, { cache: 'no-store' });
     var data = await res.json();
     if (data.ok) {
       repartidores = data.data || [];
@@ -2032,22 +2032,39 @@ function renderRepartidores() {
     return;
   }
   lista.innerHTML = '<div class="table-card"><table class="table"><thead><tr>' +
-    '<th>Nombre / Correo</th><th>Celular</th><th>Dirección / Ubicación</th><th></th>' +
+    '<th>Nombre / Correo</th><th>Celular</th><th>Dirección / Ubicación</th><th>Estado</th><th>Seguimiento</th><th></th>' +
     '</tr></thead><tbody>' +
     repartidores.map(function(r) { return renderFilaRepartidor(r); }).join('') +
     '</tbody></table></div>';
 }
 
+function formatEstadoRepartidor(r) {
+  if (Number(r.online) === 1) {
+    return '<span style="color:#22c55e;font-weight:600">🟢 En línea</span>';
+  }
+  if (!r.last_seen) {
+    return '<span style="color:var(--text-secondary)">⚪ Fuera de línea</span>';
+  }
+  var ts = new Date(r.last_seen.replace(' ', 'T'));
+  var fecha = ts.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  var hora  = ts.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return '<span style="color:var(--text-secondary)">⚪ Fuera de línea</span>' +
+         '<div style="font-size:.72rem;color:var(--text-secondary);margin-top:2px">Últ. vez: ' + fecha + ' ' + hora + 'hs</div>';
+}
+
 function renderFilaRepartidor(r) {
   var correo = r.correo ? '<br><a class="cli-email" href="mailto:' + esc(r.correo) + '">' + esc(r.correo) + '</a>' : '';
   var dir    = r.direccion ? esc(r.direccion.length > 40 ? r.direccion.substring(0,40) + '…' : r.direccion) : '—';
-  var mapa   = (r.lat && r.lng)
-    ? '<br><a class="cli-mapa" href="https://www.google.com/maps?q=' + r.lat + ',' + r.lng + '" target="_blank" rel="noopener">🗺️ Ver ubicación</a>'
-    : '';
+  var estado = formatEstadoRepartidor(r);
+  var segu   = Number(r.ubicacion_activa) === 1
+    ? '<span style="color:#22c55e;font-weight:600">🟢 Activado</span>'
+    : '<span style="color:var(--text-secondary)">⚪ Desactivado</span>';
   return '<tr id="rep-row-' + r.id + '" style="cursor:pointer" onclick="abrirDetalleRepartidor(' + r.id + ')">' +
     '<td><strong>' + esc(r.nombre) + '</strong>' + correo + '</td>' +
     '<td>' + esc(r.celular || '—') + '</td>' +
-    '<td>' + dir + mapa + '</td>' +
+    '<td>' + dir + '</td>' +
+    '<td>' + estado + '</td>' +
+    '<td>' + segu + '</td>' +
     '<td><div class="actions" onclick="event.stopPropagation()">' +
       '<button class="btn-icon-sm" title="Ver detalle" onclick="abrirDetalleRepartidor(' + r.id + ')">🔍</button>' +
       '<button class="btn-icon-sm" title="Editar" onclick="abrirEditarRepartidor(' + r.id + ')">✏️</button>' +
@@ -2064,8 +2081,7 @@ function abrirDetalleRepartidor(id) {
   document.getElementById('repDetCelular').textContent   = r.celular || '—';
   document.getElementById('repDetCorreo').textContent    = r.correo || '—';
   document.getElementById('repDetDireccion').textContent = r.direccion || '—';
-  document.getElementById('repDetContrasena').textContent = r.contrasena || '—';
-  document.getElementById('repDetClave').textContent      = r.clave      || '—';
+  document.getElementById('repDetEstado').innerHTML      = formatEstadoRepartidor(r);
 
   var ubiEl = document.getElementById('repDetUbicacion');
   if (r.lat && r.lng) {
@@ -2074,6 +2090,15 @@ function abrirDetalleRepartidor(id) {
   } else {
     ubiEl.innerHTML = '<span style="color:var(--text-secondary)">Sin ubicación registrada</span>';
   }
+
+  var seguEl = document.getElementById('repDetSeguimiento');
+  var activa = Number(r.ubicacion_activa) === 1;
+  var desde  = r.ubicacion_at
+    ? '<span style="color:var(--text-secondary);font-size:.8rem;margin-left:6px">(último registro: ' + new Date(r.ubicacion_at).toLocaleString('es-AR') + ')</span>'
+    : '';
+  seguEl.innerHTML = activa
+    ? '<span style="color:#22c55e;font-weight:600">🟢 Activado</span>' + desde
+    : '<span style="color:var(--text-secondary);font-weight:600">⚪ Desactivado</span>' + desde;
 
   document.getElementById('btnRepDetEditar').onclick = function() {
     cerrarDetalleRepartidor();
@@ -2095,7 +2120,6 @@ function abrirNuevoRepartidor() {
   document.getElementById('repCorreo').value     = '';
   document.getElementById('repDireccion').value  = '';
   document.getElementById('repContrasena').value = '';
-  document.getElementById('repClave').value      = '';
   repMapLat = null;
   repMapLng = null;
   document.getElementById('repMapInfo').innerHTML = 'Sin ubicación seleccionada.';
@@ -2113,7 +2137,6 @@ function abrirEditarRepartidor(id) {
   document.getElementById('repCorreo').value     = r.correo     || '';
   document.getElementById('repDireccion').value  = r.direccion  || '';
   document.getElementById('repContrasena').value = r.contrasena || '';
-  document.getElementById('repClave').value      = r.clave      || '';
 
   repMapLat = r.lat ? parseFloat(r.lat) : null;
   repMapLng = r.lng ? parseFloat(r.lng) : null;
@@ -2142,7 +2165,6 @@ async function guardarRepartidor() {
     correo:     document.getElementById('repCorreo').value.trim(),
     direccion:  document.getElementById('repDireccion').value.trim(),
     contrasena: document.getElementById('repContrasena').value.trim(),
-    clave:      document.getElementById('repClave').value.trim(),
     lat:        repMapLat,
     lng:        repMapLng,
   };

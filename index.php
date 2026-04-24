@@ -27,6 +27,7 @@ $authUser = authUser();
       <img class="logo-dark"  src="assets/img/repo_logo_withe.png" alt="Repo" style="height:36px; width:auto; display:none;">
     </div>
     <nav class="sidebar-nav">
+      
       <a class="nav-item active" href="#" onclick="cambiarSeccion('inicio', this)" data-section="inicio">
         <span class="nav-icon">🏠</span> Inicio
       </a>
@@ -93,14 +94,14 @@ $authUser = authUser();
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('mensajes', this)" data-section="mensajes">
             <span class="nav-icon">💬</span> Mensajes
           </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('suscriptores', this)" data-section="suscriptores">
+            <span class="nav-icon">🔔</span> Suscriptores
+          </a>
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('eventos', this)" data-section="eventos">
             <span class="nav-icon">📝</span> Eventos
           </a>
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('usuarios', this)" data-section="usuarios">
             <span class="nav-icon">👤</span> Usuarios
-          </a>
-          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('suscriptores', this)" data-section="suscriptores">
-            <span class="nav-icon">🔔</span> Suscriptores
           </a>
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('config', this)" data-section="config">
             <span class="nav-icon">⚙️</span> Configuración
@@ -1336,22 +1337,18 @@ $authUser = authUser();
       </div>
 
       <div class="ped-detail-section">
+        <div class="ped-detail-label">Estado</div>
+        <div id="repDetEstado"></div>
+      </div>
+
+      <div class="ped-detail-section">
         <div class="ped-detail-label">Ubicación GPS</div>
         <div id="repDetUbicacion"></div>
       </div>
 
       <div class="ped-detail-section">
-        <div class="ped-detail-label">Seguridad</div>
-        <div style="display:flex;gap:24px;flex-wrap:wrap">
-          <div>
-            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:2px">Contraseña</div>
-            <div id="repDetContrasena" style="font-weight:600;font-family:monospace"></div>
-          </div>
-          <div>
-            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:2px">Clave</div>
-            <div id="repDetClave" style="font-weight:600;font-family:monospace"></div>
-          </div>
-        </div>
+        <div class="ped-detail-label">Seguimiento en tiempo real</div>
+        <div id="repDetSeguimiento"></div>
       </div>
 
     </div>
@@ -1391,15 +1388,9 @@ $authUser = authUser();
         <div id="repMapInfo" class="config-hint" style="margin-bottom:8px">Sin ubicación seleccionada.</div>
         <button type="button" class="btn btn-ghost" onclick="abrirMapaSelector('repartidor')">🗺️ Seleccionar en el mapa</button>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Contraseña</label>
-          <input type="text" id="repContrasena" placeholder="Contraseña de acceso" autocomplete="off">
-        </div>
-        <div class="form-group">
-          <label>Clave</label>
-          <input type="text" id="repClave" placeholder="Clave secundaria" autocomplete="off">
-        </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="text" id="repContrasena" placeholder="Contraseña de acceso" autocomplete="off">
       </div>
     </div>
     <div class="modal-footer">

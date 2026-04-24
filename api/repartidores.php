@@ -33,19 +33,43 @@ try {
 // Crear tabla si no existe
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS repartidores (
-        id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        nombre      VARCHAR(120) NOT NULL,
-        correo      VARCHAR(150) DEFAULT NULL,
-        celular     VARCHAR(40)  DEFAULT '',
-        direccion   VARCHAR(255) DEFAULT '',
-        contrasena  VARCHAR(100) NOT NULL DEFAULT '',
-        clave       VARCHAR(100) NOT NULL DEFAULT '',
-        lat         DECIMAL(10,7) DEFAULT NULL,
-        lng         DECIMAL(10,7) DEFAULT NULL,
-        created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-        updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        nombre            VARCHAR(120) NOT NULL,
+        correo            VARCHAR(150) DEFAULT NULL,
+        celular           VARCHAR(40)  DEFAULT '',
+        direccion         VARCHAR(255) DEFAULT '',
+        contrasena        VARCHAR(100) NOT NULL DEFAULT '',
+        lat               DECIMAL(10,7) DEFAULT NULL,
+        lng               DECIMAL(10,7) DEFAULT NULL,
+        ubicacion_activa  TINYINT(1)   NOT NULL DEFAULT 0,
+        created_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+        updated_at        TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
+
+// Migración: quitar columna `clave` si existe (ya no se utiliza)
+try {
+    $pdo->query("SELECT clave FROM repartidores LIMIT 1");
+    $pdo->exec("ALTER TABLE repartidores DROP COLUMN clave");
+} catch (Throwable $e) { /* ya no existe, seguir */ }
+
+// Migración: agregar `ubicacion_activa` si falta
+try {
+    $pdo->query("SELECT ubicacion_activa FROM repartidores LIMIT 1");
+} catch (Throwable $e) {
+    try {
+        $pdo->exec("ALTER TABLE repartidores ADD COLUMN ubicacion_activa TINYINT(1) NOT NULL DEFAULT 0 AFTER lng");
+    } catch (Throwable $e2) { /* silencioso */ }
+}
+
+// Migración: agregar `last_seen` si falta (para el heartbeat "en línea")
+try {
+    $pdo->query("SELECT last_seen FROM repartidores LIMIT 1");
+} catch (Throwable $e) {
+    try {
+        $pdo->exec("ALTER TABLE repartidores ADD COLUMN last_seen TIMESTAMP NULL DEFAULT NULL, ADD INDEX idx_last_seen (last_seen)");
+    } catch (Throwable $e2) { /* silencioso */ }
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -66,7 +90,8 @@ switch ($method) {
             $params[] = $like;
         }
 
-        $sql = "SELECT id, nombre, correo, celular, direccion, contrasena, clave, lat, lng, created_at
+        $sql = "SELECT id, nombre, correo, celular, direccion, contrasena, lat, lng, ubicacion_activa, ubicacion_at, last_seen, created_at,
+                       (last_seen IS NOT NULL AND last_seen >= (NOW() - INTERVAL 60 SECOND)) AS online
                 FROM repartidores"
              . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '')
              . " ORDER BY id DESC LIMIT 200";
@@ -95,15 +120,14 @@ switch ($method) {
             break;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO repartidores (nombre, correo, celular, direccion, contrasena, clave, lat, lng)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO repartidores (nombre, correo, celular, direccion, contrasena, lat, lng)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $nombre,
             trim($body['correo']    ?? '') ?: null,
             trim($body['celular']   ?? ''),
             trim($body['direccion'] ?? ''),
             trim($body['contrasena'] ?? ''),
-            trim($body['clave']     ?? ''),
             isset($body['lat']) && $body['lat'] !== null ? (float)$body['lat'] : null,
             isset($body['lng']) && $body['lng'] !== null ? (float)$body['lng'] : null,
         ]);
@@ -144,10 +168,6 @@ switch ($method) {
         if (isset($body['contrasena'])) {
             $campos[] = 'contrasena = ?';
             $params[] = trim($body['contrasena']);
-        }
-        if (isset($body['clave'])) {
-            $campos[] = 'clave = ?';
-            $params[] = trim($body['clave']);
         }
         if (array_key_exists('lat', $body)) {
             $campos[] = 'lat = ?';
