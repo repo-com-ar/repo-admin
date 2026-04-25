@@ -749,6 +749,10 @@ function cambiarSeccion(seccion, navEl) {
     }
   });
 
+  // Detener polling de repartidores al salir de esa sección
+  clearInterval(repPollTimer);
+  repPollTimer = null;
+
   // Mostrar/ocultar secciones
   document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
 
@@ -813,6 +817,7 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionRepartidores').style.display = '';
     topbar.textContent = 'Gestión de Repartidores';
     cargarRepartidores();
+    repPollTimer = setInterval(cargarRepartidores, 8000);
   } else if (seccion === 'suscriptores') {
     document.getElementById('seccionSuscriptores').style.display = '';
     topbar.textContent = 'Suscriptores a Notificaciones';
@@ -2006,6 +2011,7 @@ function eliminarCliente(id, nombre) {
 /* ===== Repartidores ===== */
 var repartidores = [];
 var repSearchTimer = null;
+var repPollTimer = null;
 var filtroBusqRep = '';
 var repEditandoId = null;
 var repMapLat = null;
