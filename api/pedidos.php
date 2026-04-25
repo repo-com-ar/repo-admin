@@ -120,8 +120,9 @@ switch ($method) {
         }
 
         $sql = "SELECT p.id, p.numero, p.cliente, p.correo, p.celular, p.direccion, p.notas, p.total, p.estado,
-                       p.lat, p.lng, p.distancia_km, p.tiempo_min, p.created_at as fecha,
-                       p.repartidor_id, r.nombre AS repartidor_nombre, r.celular AS repartidor_celular
+                       p.lat, p.lng, p.distancia_km, p.tiempo_min, p.created_at as fecha, p.updated_at,
+                       p.repartidor_id, r.nombre AS repartidor_nombre, r.celular AS repartidor_celular,
+                       p.metodo_pago, p.estado_pago
                 FROM pedidos p
                 LEFT JOIN repartidores r ON r.id = p.repartidor_id"
              . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '')

@@ -1413,6 +1413,17 @@ const ESTADOS = {
   cancelado:   { label: 'Cancelado',   emoji: '❌', color: '#ef4444' },
 };
 
+function tiempoTranscurrido(fechaStr) {
+  if (!fechaStr) return '';
+  var diff = Math.floor((Date.now() - new Date(fechaStr).getTime()) / 1000);
+  if (diff < 60)  return 'ahora';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm';
+  var h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60);
+  if (diff < 86400) return h + 'h' + (m ? ' ' + m + 'm' : '');
+  var d = Math.floor(diff / 86400);
+  return d + 'd ' + h % 24 + 'h';
+}
+
 let pedidos = [];
 let filtroEstado = 'todos';
 let filtroBusqPedido = '';
@@ -1474,7 +1485,10 @@ function renderPedidos() {
     for (var i = 0; i < (p.items || []).length; i++) {
       itemCount += (p.items[i].cantidad || 1);
     }
-    var fecha = p.fecha ? new Date(p.fecha).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+    var d = p.fecha ? new Date(p.fecha) : null;
+    var hora = d ? d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', hour12: false }) : '';
+    var diaStr = d ? d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }) : '';
+    var elapsed = tiempoTranscurrido(p.updated_at || p.fecha);
     return '<div class="ped-card" onclick="abrirPedido(' + p.id + ')" data-id="' + p.id + '">' +
       '<div class="ped-card-head">' +
         '<span class="ped-card-num">' + esc(p.numero) + '</span>' +
@@ -1490,7 +1504,7 @@ function renderPedidos() {
         '<div class="ped-card-footer">' +
           '<span class="ped-card-items">' + itemCount + ' producto' + (itemCount !== 1 ? 's' : '') + '</span>' +
           '<span class="ped-card-total">$' + Number(p.total).toLocaleString('es-AR') + '</span>' +
-          '<span class="ped-card-fecha">' + fecha + '</span>' +
+          '<span class="ped-card-fecha">' + diaStr + ' ' + hora + '<br><small class="ped-card-elapsed">' + elapsed + '</small></span>' +
         '</div>' +
         '<div class="ped-card-rep' + (p.repartidor_nombre ? '' : ' ped-card-rep--none') + '">🛵 ' + (p.repartidor_nombre ? esc(p.repartidor_nombre) : 'Sin asignar') + '</div>' +
       '</div>' +
@@ -1561,6 +1575,20 @@ function abrirPedido(id) {
   }
   document.getElementById('pedDetItems').innerHTML = itemsHtml;
   document.getElementById('pedDetTotal').textContent = '$' + Number(pedidoActual.total).toLocaleString('es-AR');
+
+  // Pago
+  var metodoPagoMap = { efectivo: '💵 Efectivo', mercadopago: '💳 Mercado Pago' };
+  document.getElementById('pedDetMetodoPago').textContent = metodoPagoMap[pedidoActual.metodo_pago] || '—';
+
+  var estadoPagoMap = {
+    pendiente:    { label: 'Pendiente',    color: '#6b7280', bg: 'rgba(107,114,128,.12)' },
+    pagado:       { label: 'Pagado',       color: '#16a34a', bg: 'rgba(22,163,74,.12)'   },
+    parcial:      { label: 'Parcial',      color: '#d97706', bg: 'rgba(217,119,6,.12)'   },
+    reembolsado:  { label: 'Reembolsado',  color: '#dc2626', bg: 'rgba(220,38,38,.12)'   },
+  };
+  var ep = estadoPagoMap[pedidoActual.estado_pago] || estadoPagoMap.pendiente;
+  document.getElementById('pedDetEstadoPago').innerHTML =
+    '<span style="font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:20px;color:' + ep.color + ';background:' + ep.bg + '">' + ep.label + '</span>';
 
   // Estado buttons
   var btnsHtml = '';

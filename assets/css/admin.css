@@ -739,7 +739,8 @@ tbody tr:hover { background: var(--row-hover); }
 }
 .ped-card-items { color: var(--muted); }
 .ped-card-total { font-weight: 700; color: var(--text); }
-.ped-card-fecha { color: var(--muted); margin-left: auto; font-size: .78rem; }
+.ped-card-fecha { color: var(--muted); margin-left: auto; font-size: .78rem; text-align: right; line-height: 1.3; }
+.ped-card-elapsed { color: var(--muted); opacity: .7; font-size: .72rem; }
 
 /* Pedido detail modal */
 .ped-detail-section { margin-bottom: 16px; }

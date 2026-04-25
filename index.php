@@ -1235,6 +1235,14 @@ $authUser = authUser();
         <span>Total</span>
         <span id="pedDetTotal" style="font-weight:700;font-size:1.1rem"></span>
       </div>
+      <!-- Pago -->
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Pago</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div id="pedDetMetodoPago" style="font-size:.9rem;font-weight:600"></div>
+          <div id="pedDetEstadoPago"></div>
+        </div>
+      </div>
       <!-- Cambiar estado -->
       <div class="ped-detail-section">
         <div class="ped-detail-label">Estado</div>
