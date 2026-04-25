@@ -71,6 +71,15 @@ try {
     } catch (Throwable $e2) { /* silencioso */ }
 }
 
+// Migración: agregar `vehiculo` si falta
+try {
+    $pdo->query("SELECT vehiculo FROM repartidores LIMIT 1");
+} catch (Throwable $e) {
+    try {
+        $pdo->exec("ALTER TABLE repartidores ADD COLUMN vehiculo ENUM('bicicleta','moto','auto','furgon','camioneta','camion') DEFAULT NULL AFTER celular");
+    } catch (Throwable $e2) { /* silencioso */ }
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
@@ -90,7 +99,7 @@ switch ($method) {
             $params[] = $like;
         }
 
-        $sql = "SELECT id, nombre, correo, celular, direccion, contrasena, lat, lng, ubicacion_activa, ubicacion_at, last_seen, created_at,
+        $sql = "SELECT id, nombre, correo, celular, vehiculo, direccion, contrasena, lat, lng, ubicacion_activa, ubicacion_at, last_seen, created_at,
                        (last_seen IS NOT NULL AND last_seen >= (NOW() - INTERVAL 60 SECOND)) AS online
                 FROM repartidores"
              . (count($where) ? ' WHERE ' . implode(' AND ', $where) : '')
@@ -120,12 +129,17 @@ switch ($method) {
             break;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO repartidores (nombre, correo, celular, direccion, contrasena, lat, lng)
-                                VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $vehiculosValidos = ['bicicleta','moto','auto','furgon','camioneta','camion'];
+        $vehiculo = trim($body['vehiculo'] ?? '');
+        $vehiculo = in_array($vehiculo, $vehiculosValidos) ? $vehiculo : null;
+
+        $stmt = $pdo->prepare("INSERT INTO repartidores (nombre, correo, celular, vehiculo, direccion, contrasena, lat, lng)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $nombre,
             trim($body['correo']    ?? '') ?: null,
             trim($body['celular']   ?? ''),
+            $vehiculo,
             trim($body['direccion'] ?? ''),
             trim($body['contrasena'] ?? ''),
             isset($body['lat']) && $body['lat'] !== null ? (float)$body['lat'] : null,
@@ -160,6 +174,12 @@ switch ($method) {
         if (isset($body['celular'])) {
             $campos[] = 'celular = ?';
             $params[] = trim($body['celular']);
+        }
+        if (array_key_exists('vehiculo', $body)) {
+            $vehiculosValidos = ['bicicleta','moto','auto','furgon','camioneta','camion'];
+            $v = trim($body['vehiculo'] ?? '');
+            $campos[] = 'vehiculo = ?';
+            $params[] = in_array($v, $vehiculosValidos) ? $v : null;
         }
         if (isset($body['direccion'])) {
             $campos[] = 'direccion = ?';

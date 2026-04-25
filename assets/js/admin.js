@@ -25,6 +25,8 @@ const PROV_API = 'api/proveedores';
 const COMP_API = 'api/compras';
 const CART_API = 'api/carritos';
 const PAG_API  = 'api/pagos';
+const CTA_API  = 'api/cuentas';
+const AS_API   = 'api/asientos';
 
 let CATEGORIAS = [];
 let PROVEEDORES = [];
@@ -732,7 +734,7 @@ const NAV_GROUPS = {
   navGroupProductos: ['productos', 'categorias', 'inventarios'],
   navGroupVentas:    ['pedidos', 'clientes', 'carritos', 'repartidores'],
   navGroupCompras:   ['compras', 'proveedores'],
-  navGroupFinanzas:  ['pagos'],
+  navGroupFinanzas:  ['pagos', 'asientos', 'plancuentas'],
   navGroupAdmin:     ['notificaciones', 'mensajes', 'eventos', 'usuarios', 'suscriptores', 'config', 'parametros'],
 };
 
@@ -830,6 +832,14 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionPagos').style.display = '';
     topbar.textContent = 'Gestión de Pagos';
     cargarPagos();
+  } else if (seccion === 'plancuentas') {
+    document.getElementById('seccionPlanCuentas').style.display = '';
+    topbar.textContent = 'Gestión de Cuentas';
+    cargarCuentas();
+  } else if (seccion === 'asientos') {
+    document.getElementById('seccionAsientos').style.display = '';
+    topbar.textContent = 'Gestión de Asientos';
+    cargarAsientos();
   } else if (seccion === 'parametros') {
     document.getElementById('seccionParametros').style.display = '';
     topbar.textContent = 'Parámetros del sistema';
@@ -1861,13 +1871,10 @@ function renderFilaCliente(c) {
   var ultimo  = c.ultimo_pedido ? new Date(c.ultimo_pedido).toLocaleDateString('es-AR') : '—';
   var correo  = c.correo ? '<br><a class="cli-email" href="mailto:' + esc(c.correo) + '">' + esc(c.correo) + '</a>' : '';
   var dir     = c.direccion ? esc(c.direccion.length > 40 ? c.direccion.substring(0,40) + '…' : c.direccion) : '—';
-  var mapa    = (c.lat && c.lng)
-    ? '<br><a class="cli-mapa" href="https://www.google.com/maps?q=' + c.lat + ',' + c.lng + '" target="_blank" rel="noopener">🗺️ Ver ubicación</a>'
-    : '';
   return '<tr id="cli-row-' + c.id + '" style="cursor:pointer" onclick="abrirDetalleCliente(' + c.id + ')">' +
     '<td><strong>' + esc(c.nombre) + '</strong>' + correo + '</td>' +
     '<td>' + esc(c.celular || '—') + '</td>' +
-    '<td>' + dir + mapa + '</td>' +
+    '<td>' + dir + '</td>' +
     '<td style="text-align:center">' + c.total_pedidos + '</td>' +
     '<td>$' + Number(c.total_gastado).toLocaleString('es-AR') + '</td>' +
     '<td>' + ultimo + '</td>' +
@@ -2224,7 +2231,7 @@ function renderRepartidores() {
     return;
   }
   lista.innerHTML = '<div class="table-card"><table class="table"><thead><tr>' +
-    '<th>Nombre / Correo</th><th>Celular</th><th>Dirección / Ubicación</th><th>Estado</th><th>Seguimiento</th><th></th>' +
+    '<th>Nombre / Correo</th><th>Celular</th><th>Dirección / Ubicación</th><th>Vehículo</th><th>Estado</th><th>Seguimiento</th><th></th>' +
     '</tr></thead><tbody>' +
     repartidores.map(function(r) { return renderFilaRepartidor(r); }).join('') +
     '</tbody></table></div>';
@@ -2251,10 +2258,13 @@ function renderFilaRepartidor(r) {
   var segu   = Number(r.ubicacion_activa) === 1
     ? '<span style="color:#22c55e;font-weight:600">🟢 Activado</span>'
     : '<span style="color:var(--text-secondary)">⚪ Desactivado</span>';
+  var vehiculosIcon = { bicicleta:'🚲', moto:'🛵', auto:'🚗', furgon:'🚐', camioneta:'🚙', camion:'🚛' };
+  var vehiculoIcon  = r.vehiculo ? '<span title="' + esc(r.vehiculo) + '" style="font-size:1.3rem;display:block;text-align:center">' + (vehiculosIcon[r.vehiculo] || '—') + '</span>' : '<span style="color:var(--text-secondary);display:block;text-align:center">—</span>';
   return '<tr id="rep-row-' + r.id + '" style="cursor:pointer" onclick="abrirDetalleRepartidor(' + r.id + ')">' +
     '<td><strong>' + esc(r.nombre) + '</strong>' + correo + '</td>' +
     '<td>' + esc(r.celular || '—') + '</td>' +
     '<td>' + dir + '</td>' +
+    '<td style="text-align:center">' + vehiculoIcon + '</td>' +
     '<td>' + estado + '</td>' +
     '<td>' + segu + '</td>' +
     '<td><div class="actions" onclick="event.stopPropagation()">' +
@@ -2269,8 +2279,10 @@ function abrirDetalleRepartidor(id) {
   var r = repartidores.find(function(x) { return x.id === id; });
   if (!r) return;
 
+  var vehiculosLabel = { bicicleta:'🚲 Bicicleta', moto:'🛵 Moto', auto:'🚗 Auto', furgon:'🚐 Furgón', camioneta:'🚙 Camioneta', camion:'🚛 Camión' };
   document.getElementById('repDetNombre').textContent    = r.nombre || '—';
   document.getElementById('repDetCelular').textContent   = r.celular || '—';
+  document.getElementById('repDetVehiculo').textContent  = vehiculosLabel[r.vehiculo] || '—';
   document.getElementById('repDetCorreo').textContent    = r.correo || '—';
   document.getElementById('repDetDireccion').textContent = r.direccion || '—';
   document.getElementById('repDetEstado').innerHTML      = formatEstadoRepartidor(r);
@@ -2309,6 +2321,7 @@ function abrirNuevoRepartidor() {
   document.getElementById('repModalTitulo').textContent = 'Nuevo repartidor';
   document.getElementById('repNombre').value     = '';
   document.getElementById('repCelular').value    = '';
+  document.getElementById('repVehiculo').value   = '';
   document.getElementById('repCorreo').value     = '';
   document.getElementById('repDireccion').value  = '';
   document.getElementById('repContrasena').value = '';
@@ -2326,6 +2339,7 @@ function abrirEditarRepartidor(id) {
   document.getElementById('repModalTitulo').textContent = 'Editar repartidor';
   document.getElementById('repNombre').value     = r.nombre     || '';
   document.getElementById('repCelular').value    = r.celular    || '';
+  document.getElementById('repVehiculo').value   = r.vehiculo   || '';
   document.getElementById('repCorreo').value     = r.correo     || '';
   document.getElementById('repDireccion').value  = r.direccion  || '';
   document.getElementById('repContrasena').value = r.contrasena || '';
@@ -2354,6 +2368,7 @@ async function guardarRepartidor() {
   var body = {
     nombre:     nombre,
     celular:    document.getElementById('repCelular').value.trim(),
+    vehiculo:   document.getElementById('repVehiculo').value || null,
     correo:     document.getElementById('repCorreo').value.trim(),
     direccion:  document.getElementById('repDireccion').value.trim(),
     contrasena: document.getElementById('repContrasena').value.trim(),
@@ -4117,4 +4132,603 @@ function renderPagos() {
     '</tr></thead>' +
     '<tbody>' + rows + '</tbody>' +
     '</table></div>';
+}
+
+/* ===== Plan de Cuentas ===== */
+let cuentas = [];
+let ctaBusqueda = '';
+let ctaFiltroTipo = '';
+let ctaEditandoId = null;
+let ctaSearchTimer = null;
+const ctaColapsadas = new Set(); // ids de cuentas con hijos colapsadas
+
+const CTA_TIPO_LABEL = {
+  activo:     '🏦 Activo',
+  pasivo:     '📉 Pasivo',
+  patrimonio: '💼 Patrimonio',
+  ingreso:    '📈 Ingreso',
+  egreso:     '💸 Egreso',
+};
+const CTA_TIPO_COLOR = {
+  activo:     '#3b82f6',
+  pasivo:     '#ef4444',
+  patrimonio: '#8b5cf6',
+  ingreso:    '#22c55e',
+  egreso:     '#f59e0b',
+};
+
+function onSearchCuenta(val) {
+  clearTimeout(ctaSearchTimer);
+  ctaSearchTimer = setTimeout(function() { ctaBusqueda = val.trim(); cargarCuentas(); }, 300);
+}
+function onFiltroTipoCuenta(val) {
+  ctaFiltroTipo = val || '';
+  cargarCuentas();
+}
+
+async function cargarCuentas() {
+  const lista = document.getElementById('cuentasLista');
+  lista.innerHTML = '<div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>';
+  try {
+    const params = new URLSearchParams();
+    if (ctaBusqueda)   params.set('q', ctaBusqueda);
+    if (ctaFiltroTipo) params.set('tipo', ctaFiltroTipo);
+    const url = CTA_API + (params.toString() ? '?' + params.toString() : '');
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.ok) {
+      cuentas = data.data || [];
+      renderCuentas();
+      const s = data.stats || {};
+      document.getElementById('ctaStatTotal').textContent      = s.total ?? cuentas.length;
+      document.getElementById('ctaStatActivo').textContent     = s.activo ?? 0;
+      document.getElementById('ctaStatPasivo').textContent     = s.pasivo ?? 0;
+      document.getElementById('ctaStatPatrimonio').textContent = s.patrimonio ?? 0;
+      document.getElementById('ctaStatIngreso').textContent    = s.ingreso ?? 0;
+      document.getElementById('ctaStatEgreso').textContent     = s.egreso ?? 0;
+    } else {
+      lista.innerHTML = '<div class="table-empty">Error al cargar cuentas</div>';
+    }
+  } catch (e) {
+    lista.innerHTML = '<div class="table-empty">Error de conexión</div>';
+  }
+}
+
+function renderCuentas() {
+  const lista = document.getElementById('cuentasLista');
+  if (!cuentas.length) {
+    lista.innerHTML = '<div class="table-empty">No hay cuentas registradas</div>';
+    return;
+  }
+
+  // Mapa id -> nodo + hijos
+  const byId = {};
+  cuentas.forEach(c => { byId[c.id] = Object.assign({}, c, { children: [] }); });
+  const raices = [];
+  cuentas.forEach(c => {
+    const n = byId[c.id];
+    if (c.parent_id && byId[c.parent_id]) byId[c.parent_id].children.push(n);
+    else raices.push(n);
+  });
+
+  // Si hay búsqueda o filtro, aplanamos (no jerárquico)
+  const aplanado = !!(ctaBusqueda || ctaFiltroTipo);
+
+  let html = '<div class="table-card"><table class="table"><thead><tr>' +
+    '<th style="width:140px">Código</th>' +
+    '<th>Nombre</th>' +
+    '<th style="width:130px">Tipo</th>' +
+    '<th style="width:110px;text-align:center">Naturaleza</th>' +
+    '<th style="width:110px;text-align:center">Imputable</th>' +
+    '<th style="width:90px;text-align:center">Estado</th>' +
+    '<th style="width:120px"></th>' +
+    '</tr></thead><tbody>';
+
+  if (aplanado) {
+    html += cuentas.map(c => renderFilaCuenta(c, 0, false, false)).join('');
+  } else {
+    function walk(nodo, depth) {
+      const tieneHijos = nodo.children.length > 0;
+      const colapsada  = ctaColapsadas.has(nodo.id);
+      html += renderFilaCuenta(nodo, depth, tieneHijos, colapsada);
+      if (tieneHijos && !colapsada) {
+        nodo.children.forEach(h => walk(h, depth + 1));
+      }
+    }
+    raices.forEach(r => walk(r, 0));
+  }
+
+  html += '</tbody></table></div>';
+  lista.innerHTML = html;
+}
+
+function renderFilaCuenta(c, depth, tieneHijos, colapsada) {
+  const indent = depth * 22;
+  const toggle = tieneHijos
+    ? '<span class="cta-toggle" onclick="event.stopPropagation();toggleCuenta(' + c.id + ')" style="cursor:pointer;display:inline-block;width:18px;text-align:center;user-select:none">' + (colapsada ? '▶' : '▼') + '</span>'
+    : '<span style="display:inline-block;width:18px"></span>';
+
+  const tipoBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;background:' + CTA_TIPO_COLOR[c.tipo] + '20;color:' + CTA_TIPO_COLOR[c.tipo] + '">' + CTA_TIPO_LABEL[c.tipo] + '</span>';
+
+  const naturaleza = c.naturaleza === 'deudora'
+    ? '<span style="color:#3b82f6;font-weight:600">D</span>'
+    : '<span style="color:#ef4444;font-weight:600">A</span>';
+
+  const imputable = Number(c.imputable) === 1
+    ? '<span style="color:#22c55e">✓</span>'
+    : '<span style="color:var(--text-secondary)">—</span>';
+
+  const activa = Number(c.activa) === 1
+    ? '<span style="color:#22c55e;font-size:.78rem">● Activa</span>'
+    : '<span style="color:var(--text-secondary);font-size:.78rem">○ Inactiva</span>';
+
+  const fontWeight = Number(c.imputable) === 0 ? 'font-weight:700' : '';
+
+  return '<tr>' +
+    '<td><span style="display:inline-block;margin-left:' + indent + 'px">' + toggle + ' <code style="font-size:.82rem">' + esc(c.codigo) + '</code></span></td>' +
+    '<td style="' + fontWeight + '">' + esc(c.nombre) + '</td>' +
+    '<td>' + tipoBadge + '</td>' +
+    '<td style="text-align:center">' + naturaleza + '</td>' +
+    '<td style="text-align:center">' + imputable + '</td>' +
+    '<td style="text-align:center">' + activa + '</td>' +
+    '<td><div class="actions">' +
+      '<button class="btn-icon-sm" title="Agregar subcuenta" onclick="abrirNuevaCuenta(' + c.id + ')">➕</button>' +
+      '<button class="btn-icon-sm" title="Editar" onclick="abrirEditarCuenta(' + c.id + ')">✏️</button>' +
+      '<button class="btn-icon-sm" title="Eliminar" onclick="eliminarCuenta(' + c.id + ',\'' + esc(c.nombre).replace(/'/g, "\\'") + '\')">🗑️</button>' +
+    '</div></td>' +
+    '</tr>';
+}
+
+function toggleCuenta(id) {
+  if (ctaColapsadas.has(id)) ctaColapsadas.delete(id);
+  else ctaColapsadas.add(id);
+  renderCuentas();
+}
+
+function expandirTodoCuentas(expandir) {
+  if (expandir) {
+    ctaColapsadas.clear();
+  } else {
+    // colapsar todas las que tienen hijos
+    const conHijos = new Set();
+    cuentas.forEach(c => { if (c.parent_id) conHijos.add(c.parent_id); });
+    conHijos.forEach(id => ctaColapsadas.add(id));
+  }
+  renderCuentas();
+}
+
+function poblarSelectPadre(excludeId) {
+  const sel = document.getElementById('ctaParent');
+  sel.innerHTML = '<option value="">— Sin padre (cuenta raíz) —</option>';
+  // Ordenar por código y excluir la cuenta que se está editando + sus descendientes
+  const excluidos = new Set();
+  if (excludeId) {
+    excluidos.add(excludeId);
+    let hubo = true;
+    while (hubo) {
+      hubo = false;
+      cuentas.forEach(c => {
+        if (c.parent_id && excluidos.has(c.parent_id) && !excluidos.has(c.id)) {
+          excluidos.add(c.id); hubo = true;
+        }
+      });
+    }
+  }
+  cuentas.forEach(c => {
+    if (excluidos.has(c.id)) return;
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.codigo + ' — ' + c.nombre;
+    sel.appendChild(opt);
+  });
+}
+
+function abrirNuevaCuenta(parentId) {
+  ctaEditandoId = null;
+  document.getElementById('ctaModalTitulo').textContent = 'Nueva cuenta';
+  document.getElementById('ctaCodigo').value      = '';
+  document.getElementById('ctaNombre').value      = '';
+  document.getElementById('ctaTipo').value        = 'activo';
+  document.getElementById('ctaNaturaleza').value  = 'deudora';
+  document.getElementById('ctaDescripcion').value = '';
+  document.getElementById('ctaImputable').checked = true;
+  document.getElementById('ctaActiva').checked    = true;
+  poblarSelectPadre(null);
+
+  // Si viene parentId, lo seleccionamos y heredamos tipo/naturaleza
+  if (parentId) {
+    const padre = cuentas.find(c => c.id === parentId);
+    if (padre) {
+      document.getElementById('ctaParent').value     = parentId;
+      document.getElementById('ctaTipo').value       = padre.tipo;
+      document.getElementById('ctaNaturaleza').value = padre.naturaleza;
+    }
+  } else {
+    document.getElementById('ctaParent').value = '';
+  }
+
+  document.getElementById('ctaModalBackdrop').classList.add('open');
+  document.getElementById('ctaCodigo').focus();
+}
+
+function abrirEditarCuenta(id) {
+  const c = cuentas.find(x => x.id === id);
+  if (!c) return;
+  ctaEditandoId = id;
+  document.getElementById('ctaModalTitulo').textContent = 'Editar cuenta';
+  document.getElementById('ctaCodigo').value      = c.codigo || '';
+  document.getElementById('ctaNombre').value      = c.nombre || '';
+  document.getElementById('ctaTipo').value        = c.tipo || 'activo';
+  document.getElementById('ctaNaturaleza').value  = c.naturaleza || 'deudora';
+  document.getElementById('ctaDescripcion').value = c.descripcion || '';
+  document.getElementById('ctaImputable').checked = Number(c.imputable) === 1;
+  document.getElementById('ctaActiva').checked    = Number(c.activa) === 1;
+  poblarSelectPadre(id);
+  document.getElementById('ctaParent').value      = c.parent_id || '';
+  document.getElementById('ctaModalBackdrop').classList.add('open');
+}
+
+function cerrarModalCuenta() {
+  document.getElementById('ctaModalBackdrop').classList.remove('open');
+  ctaEditandoId = null;
+}
+
+async function guardarCuenta() {
+  const codigo     = document.getElementById('ctaCodigo').value.trim();
+  const nombre     = document.getElementById('ctaNombre').value.trim();
+  const tipo       = document.getElementById('ctaTipo').value;
+  const naturaleza = document.getElementById('ctaNaturaleza').value;
+  const parent_id  = document.getElementById('ctaParent').value || null;
+  const descripcion = document.getElementById('ctaDescripcion').value.trim();
+  const imputable  = document.getElementById('ctaImputable').checked ? 1 : 0;
+  const activa     = document.getElementById('ctaActiva').checked ? 1 : 0;
+
+  if (!codigo) { showToast('El código es obligatorio', true); return; }
+  if (!nombre) { showToast('El nombre es obligatorio', true); return; }
+
+  const body = { codigo, nombre, tipo, naturaleza, parent_id, descripcion, imputable, activa };
+
+  let method = 'POST';
+  if (ctaEditandoId) { body.id = ctaEditandoId; method = 'PUT'; }
+
+  try {
+    const res  = await fetch(CTA_API, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.ok) {
+      cerrarModalCuenta();
+      cargarCuentas();
+      showToast(ctaEditandoId ? 'Cuenta actualizada' : 'Cuenta creada');
+    } else {
+      showToast(data.error || 'Error al guardar', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+function eliminarCuenta(id, nombre) {
+  document.getElementById('confirmMsg').textContent = '¿Eliminás la cuenta "' + nombre + '"?';
+  confirmCallback = async function() {
+    try {
+      const res  = await fetch(CTA_API + '?id=' + id, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Cuenta eliminada');
+        cargarCuentas();
+      } else {
+        showToast(data.error || 'Error al eliminar', true);
+      }
+    } catch (e) {
+      showToast('Error de conexión', true);
+    }
+  };
+  document.getElementById('confirmBackdrop').classList.add('open');
+}
+
+/* ===== Asientos contables ===== */
+let asientos = [];
+let asBusqueda = '';
+let asEditandoId = null;
+let asSearchTimer = null;
+let asLineas = [];        // [{cuenta_id, debe, haber, descripcion}]
+let asCuentasImputables = []; // cache de cuentas imputables (para selects)
+
+function fmtMoney(n) {
+  return Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function onSearchAsiento(val) {
+  clearTimeout(asSearchTimer);
+  asSearchTimer = setTimeout(function() { asBusqueda = val.trim(); cargarAsientos(); }, 300);
+}
+function onFiltroFechaAsiento() {
+  cargarAsientos();
+}
+
+async function cargarAsientos() {
+  const lista = document.getElementById('asientosLista');
+  lista.innerHTML = '<div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>';
+  try {
+    const params = new URLSearchParams();
+    if (asBusqueda) params.set('q', asBusqueda);
+    const desde = document.getElementById('asFiltroDesde').value;
+    const hasta = document.getElementById('asFiltroHasta').value;
+    if (desde) params.set('desde', desde);
+    if (hasta) params.set('hasta', hasta);
+    const url = AS_API + (params.toString() ? '?' + params.toString() : '');
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.ok) {
+      asientos = data.data || [];
+      renderAsientos();
+      const s = data.stats || {};
+      document.getElementById('asStatTotal').textContent = s.total ?? asientos.length;
+      document.getElementById('asStatMes').textContent   = s.del_mes ?? 0;
+      document.getElementById('asStatMonto').textContent = '$' + fmtMoney(s.monto || 0);
+    } else {
+      lista.innerHTML = '<div class="table-empty">Error al cargar asientos</div>';
+    }
+  } catch (e) {
+    lista.innerHTML = '<div class="table-empty">Error de conexión</div>';
+  }
+}
+
+function renderAsientos() {
+  const lista = document.getElementById('asientosLista');
+  if (!asientos.length) {
+    lista.innerHTML = '<div class="table-empty">No hay asientos registrados</div>';
+    return;
+  }
+  lista.innerHTML = '<div class="table-card"><table class="table"><thead><tr>' +
+    '<th style="width:80px">N°</th>' +
+    '<th style="width:120px">Fecha</th>' +
+    '<th>Descripción</th>' +
+    '<th style="width:140px;text-align:right">Total</th>' +
+    '<th style="width:120px"></th>' +
+    '</tr></thead><tbody>' +
+    asientos.map(renderFilaAsiento).join('') +
+    '</tbody></table></div>';
+}
+
+function renderFilaAsiento(a) {
+  const fecha = a.fecha ? new Date(a.fecha + 'T00:00:00').toLocaleDateString('es-AR') : '—';
+  return '<tr style="cursor:pointer" onclick="abrirDetalleAsiento(' + a.id + ')">' +
+    '<td><strong>#' + a.numero + '</strong></td>' +
+    '<td>' + fecha + '</td>' +
+    '<td>' + esc(a.descripcion || '') + '</td>' +
+    '<td style="text-align:right;font-weight:600">$' + fmtMoney(a.total) + '</td>' +
+    '<td><div class="actions" onclick="event.stopPropagation()">' +
+      '<button class="btn-icon-sm" title="Ver detalle" onclick="abrirDetalleAsiento(' + a.id + ')">🔍</button>' +
+      '<button class="btn-icon-sm" title="Editar" onclick="abrirEditarAsiento(' + a.id + ')">✏️</button>' +
+      '<button class="btn-icon-sm" title="Eliminar" onclick="eliminarAsiento(' + a.id + ',' + a.numero + ')">🗑️</button>' +
+    '</div></td>' +
+    '</tr>';
+}
+
+async function asegurarCuentasImputables() {
+  if (asCuentasImputables.length) return;
+  try {
+    const res  = await fetch(CTA_API);
+    const data = await res.json();
+    if (data.ok) {
+      asCuentasImputables = (data.data || []).filter(c => Number(c.imputable) === 1 && Number(c.activa) === 1);
+    }
+  } catch (e) { /* silencio */ }
+}
+
+function selectCuentaHTML(selectedId) {
+  let html = '<option value="">— Seleccionar cuenta —</option>';
+  asCuentasImputables.forEach(c => {
+    const sel = (Number(selectedId) === c.id) ? ' selected' : '';
+    html += '<option value="' + c.id + '"' + sel + '>' + esc(c.codigo) + ' — ' + esc(c.nombre) + '</option>';
+  });
+  return html;
+}
+
+function renderLineasAsiento() {
+  const tbody = document.getElementById('asLineasBody');
+  if (!asLineas.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:14px">Sin líneas. Hacé clic en "+ Agregar línea".</td></tr>';
+    document.getElementById('asTotalDebe').textContent  = '0,00';
+    document.getElementById('asTotalHaber').textContent = '0,00';
+    document.getElementById('asBalance').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = asLineas.map((l, i) => {
+    return '<tr>' +
+      '<td><select onchange="updateLineaAsiento(' + i + ',\'cuenta_id\',this.value)" style="width:100%">' + selectCuentaHTML(l.cuenta_id) + '</select></td>' +
+      '<td><input type="number" step="0.01" min="0" value="' + (l.debe || '') + '" onchange="updateLineaAsiento(' + i + ',\'debe\',this.value)" style="width:100%;text-align:right"></td>' +
+      '<td><input type="number" step="0.01" min="0" value="' + (l.haber || '') + '" onchange="updateLineaAsiento(' + i + ',\'haber\',this.value)" style="width:100%;text-align:right"></td>' +
+      '<td><input type="text" value="' + esc(l.descripcion || '') + '" onchange="updateLineaAsiento(' + i + ',\'descripcion\',this.value)" style="width:100%" placeholder="Detalle (opcional)"></td>' +
+      '<td><button type="button" class="btn-icon-sm" title="Eliminar línea" onclick="quitarLineaAsiento(' + i + ')">🗑️</button></td>' +
+      '</tr>';
+  }).join('');
+  recalcularTotalesAsiento();
+}
+
+function recalcularTotalesAsiento() {
+  let totD = 0, totH = 0;
+  asLineas.forEach(l => { totD += Number(l.debe || 0); totH += Number(l.haber || 0); });
+  document.getElementById('asTotalDebe').textContent  = fmtMoney(totD);
+  document.getElementById('asTotalHaber').textContent = fmtMoney(totH);
+  const diff = Math.abs(totD - totH);
+  const bal = document.getElementById('asBalance');
+  if (diff < 0.01 && totD > 0) {
+    bal.innerHTML = '<span style="color:#22c55e;font-weight:600">✓ Balanceado</span>';
+  } else if (totD === 0 && totH === 0) {
+    bal.innerHTML = '';
+  } else {
+    bal.innerHTML = '<span style="color:#ef4444;font-weight:600">✗ Diferencia: $' + fmtMoney(diff) + '</span>';
+  }
+}
+
+function agregarLineaAsiento() {
+  asLineas.push({ cuenta_id: '', debe: '', haber: '', descripcion: '' });
+  renderLineasAsiento();
+}
+
+function quitarLineaAsiento(i) {
+  asLineas.splice(i, 1);
+  renderLineasAsiento();
+}
+
+function updateLineaAsiento(i, campo, valor) {
+  if (!asLineas[i]) return;
+  if (campo === 'debe' || campo === 'haber') {
+    asLineas[i][campo] = valor === '' ? '' : Number(valor);
+    // Si se ingresa debe, limpiar haber (y viceversa)
+    if (campo === 'debe' && Number(valor) > 0) asLineas[i].haber = '';
+    if (campo === 'haber' && Number(valor) > 0) asLineas[i].debe = '';
+  } else if (campo === 'cuenta_id') {
+    asLineas[i].cuenta_id = valor ? Number(valor) : '';
+  } else {
+    asLineas[i][campo] = valor;
+  }
+  renderLineasAsiento();
+}
+
+async function abrirNuevoAsiento() {
+  await asegurarCuentasImputables();
+  if (!asCuentasImputables.length) {
+    showToast('No hay cuentas imputables. Cargá el plan de cuentas primero.', true);
+    return;
+  }
+  asEditandoId = null;
+  document.getElementById('asModalTitulo').textContent = 'Nuevo asiento';
+  const hoy = new Date().toISOString().slice(0,10);
+  document.getElementById('asFecha').value       = hoy;
+  document.getElementById('asDescripcion').value = '';
+  asLineas = [
+    { cuenta_id: '', debe: '', haber: '', descripcion: '' },
+    { cuenta_id: '', debe: '', haber: '', descripcion: '' },
+  ];
+  renderLineasAsiento();
+  document.getElementById('asModalBackdrop').classList.add('open');
+  document.getElementById('asDescripcion').focus();
+}
+
+async function abrirEditarAsiento(id) {
+  await asegurarCuentasImputables();
+  try {
+    const res  = await fetch(AS_API + '?id=' + id);
+    const data = await res.json();
+    if (!data.ok) { showToast(data.error || 'No se pudo cargar', true); return; }
+    const a = data.data;
+    asEditandoId = id;
+    document.getElementById('asModalTitulo').textContent = 'Editar asiento N° ' + a.numero;
+    document.getElementById('asFecha').value       = a.fecha || '';
+    document.getElementById('asDescripcion').value = a.descripcion || '';
+    asLineas = (a.detalle || []).map(d => ({
+      cuenta_id:   d.cuenta_id,
+      debe:        Number(d.debe)  || '',
+      haber:       Number(d.haber) || '',
+      descripcion: d.descripcion || '',
+    }));
+    if (asLineas.length < 2) {
+      while (asLineas.length < 2) asLineas.push({ cuenta_id: '', debe: '', haber: '', descripcion: '' });
+    }
+    renderLineasAsiento();
+    document.getElementById('asModalBackdrop').classList.add('open');
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+function cerrarModalAsiento() {
+  document.getElementById('asModalBackdrop').classList.remove('open');
+  asEditandoId = null;
+  asLineas = [];
+}
+
+async function guardarAsiento() {
+  const fecha       = document.getElementById('asFecha').value;
+  const descripcion = document.getElementById('asDescripcion').value.trim();
+
+  if (!fecha)       { showToast('La fecha es obligatoria', true); return; }
+  if (!descripcion) { showToast('La descripción es obligatoria', true); return; }
+  if (asLineas.length < 2) { showToast('Se requieren al menos 2 líneas', true); return; }
+
+  // Limpiar líneas vacías sin tocar las parciales
+  const detalle = asLineas
+    .filter(l => l.cuenta_id || Number(l.debe) > 0 || Number(l.haber) > 0)
+    .map(l => ({
+      cuenta_id: l.cuenta_id ? Number(l.cuenta_id) : 0,
+      debe:      Number(l.debe)  || 0,
+      haber:     Number(l.haber) || 0,
+      descripcion: l.descripcion || '',
+    }));
+
+  if (detalle.length < 2) { showToast('Se requieren al menos 2 líneas con datos', true); return; }
+
+  const body = { fecha, descripcion, detalle };
+  let method = 'POST';
+  if (asEditandoId) { body.id = asEditandoId; method = 'PUT'; }
+
+  try {
+    const res  = await fetch(AS_API, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.ok) {
+      cerrarModalAsiento();
+      cargarAsientos();
+      showToast(asEditandoId ? 'Asiento actualizado' : 'Asiento creado');
+    } else {
+      showToast(data.error || 'Error al guardar', true);
+    }
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+async function abrirDetalleAsiento(id) {
+  try {
+    const res  = await fetch(AS_API + '?id=' + id);
+    const data = await res.json();
+    if (!data.ok) { showToast(data.error || 'No se pudo cargar', true); return; }
+    const a = data.data;
+    document.getElementById('asDetNumero').textContent      = a.numero;
+    document.getElementById('asDetFecha').textContent       = a.fecha ? new Date(a.fecha + 'T00:00:00').toLocaleDateString('es-AR') : '—';
+    document.getElementById('asDetTotal').textContent       = '$' + fmtMoney(a.total);
+    document.getElementById('asDetDescripcion').textContent = a.descripcion || '—';
+
+    document.getElementById('asDetLineas').innerHTML = (a.detalle || []).map(d => {
+      const cta = (d.cuenta_codigo ? d.cuenta_codigo + ' — ' : '') + (d.cuenta_nombre || '—');
+      return '<tr>' +
+        '<td>' + esc(cta) + '</td>' +
+        '<td style="text-align:right">' + (Number(d.debe)  > 0 ? '$' + fmtMoney(d.debe)  : '—') + '</td>' +
+        '<td style="text-align:right">' + (Number(d.haber) > 0 ? '$' + fmtMoney(d.haber) : '—') + '</td>' +
+        '<td>' + esc(d.descripcion || '') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    document.getElementById('btnAsDetEditar').onclick = function() {
+      cerrarDetalleAsiento();
+      abrirEditarAsiento(id);
+    };
+    document.getElementById('asDetBackdrop').classList.add('open');
+  } catch (e) {
+    showToast('Error de conexión', true);
+  }
+}
+
+function cerrarDetalleAsiento() {
+  document.getElementById('asDetBackdrop').classList.remove('open');
+}
+
+function eliminarAsiento(id, numero) {
+  document.getElementById('confirmMsg').textContent = '¿Eliminás el asiento N° ' + numero + '?';
+  confirmCallback = async function() {
+    try {
+      const res  = await fetch(AS_API + '?id=' + id, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Asiento eliminado');
+        cargarAsientos();
+      } else {
+        showToast(data.error || 'Error al eliminar', true);
+      }
+    } catch (e) {
+      showToast('Error de conexión', true);
+    }
+  };
+  document.getElementById('confirmBackdrop').classList.add('open');
 }

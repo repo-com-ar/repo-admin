@@ -148,7 +148,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .toolbar-right { display: flex; gap: 10px; }
 
 /* ===== Inputs & Selects ===== */
-input[type=text], input[type=number], input[type=url], input[type=tel], input[type=email], select, textarea {
+input[type=text], input[type=number], input[type=url], input[type=tel], input[type=email], input[type=date], input[type=time], input[type=datetime-local], input[type=password], input[type=search], select, textarea {
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 8px 12px; font-size: .88rem; background: var(--surface);
   color: var(--text); outline: none; transition: border .15s;
@@ -424,6 +424,7 @@ tbody tr:hover { background: var(--row-hover); }
     position: fixed; top: 0; left: 0; height: 100vh; z-index: 200;
     transform: translateX(-100%); transition: transform .25s ease;
     box-shadow: var(--shadow-lg);
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   }
   .sidebar.open { transform: translateX(0); }
 

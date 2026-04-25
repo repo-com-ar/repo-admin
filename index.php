@@ -94,6 +94,12 @@ $authUser = authUser();
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('pagos', this)" data-section="pagos">
             <span class="nav-icon">💵</span> Pagos
           </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('asientos', this)" data-section="asientos">
+            <span class="nav-icon">📖</span> Asientos
+          </a>
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('plancuentas', this)" data-section="plancuentas">
+            <span class="nav-icon">📒</span> Plan de Cuentas
+          </a>
         </div>
       </div>
 
@@ -110,7 +116,7 @@ $authUser = authUser();
             <span class="nav-icon">💬</span> Mensajes
           </a>
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('suscriptores', this)" data-section="suscriptores">
-            <span class="nav-icon">🔔</span> Suscriptores
+            <span class="nav-icon">📱</span> Suscriptores
           </a>
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('eventos', this)" data-section="eventos">
             <span class="nav-icon">📝</span> Eventos
@@ -995,6 +1001,98 @@ $authUser = authUser();
 
       </div><!-- /seccionPagos -->
 
+      <!-- ========== SECCIÓN ASIENTOS ========== -->
+      <div class="section" id="seccionAsientos" style="display:none">
+
+        <div class="stats-bar">
+          <div class="stat-card">
+            <span class="stat-label">Total asientos</span>
+            <span class="stat-value orange" id="asStatTotal">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Del mes</span>
+            <span class="stat-value" style="color:#3b82f6" id="asStatMes">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Monto acumulado</span>
+            <span class="stat-value green" id="asStatMonto">—</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar por nº o descripción..." oninput="onSearchAsiento(this.value)">
+            <input type="date" id="asFiltroDesde" onchange="onFiltroFechaAsiento()" style="max-width:150px">
+            <input type="date" id="asFiltroHasta" onchange="onFiltroFechaAsiento()" style="max-width:150px">
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="cargarAsientos()">🔄 Actualizar</button>
+            <button class="btn btn-primary" onclick="abrirNuevoAsiento()">+ Nuevo asiento</button>
+          </div>
+        </div>
+
+        <div id="asientosLista">
+          <div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>
+        </div>
+
+      </div><!-- /seccionAsientos -->
+
+      <!-- ========== SECCIÓN PLAN DE CUENTAS ========== -->
+      <div class="section" id="seccionPlanCuentas" style="display:none">
+
+        <div class="stats-bar">
+          <div class="stat-card">
+            <span class="stat-label">Total cuentas</span>
+            <span class="stat-value orange" id="ctaStatTotal">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Activo</span>
+            <span class="stat-value" style="color:#3b82f6" id="ctaStatActivo">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Pasivo</span>
+            <span class="stat-value red" id="ctaStatPasivo">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Patrimonio</span>
+            <span class="stat-value" style="color:#8b5cf6" id="ctaStatPatrimonio">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Ingresos</span>
+            <span class="stat-value green" id="ctaStatIngreso">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Egresos</span>
+            <span class="stat-value" style="color:#f59e0b" id="ctaStatEgreso">—</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar por código o nombre..." oninput="onSearchCuenta(this.value)">
+            <select id="filterTipoCuenta" onchange="onFiltroTipoCuenta(this.value)">
+              <option value="">Todos los tipos</option>
+              <option value="activo">Activo</option>
+              <option value="pasivo">Pasivo</option>
+              <option value="patrimonio">Patrimonio</option>
+              <option value="ingreso">Ingresos</option>
+              <option value="egreso">Egresos</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="expandirTodoCuentas(true)">⊞ Expandir todo</button>
+            <button class="btn btn-ghost" onclick="expandirTodoCuentas(false)">⊟ Colapsar</button>
+            <button class="btn btn-ghost" onclick="cargarCuentas()">🔄 Actualizar</button>
+            <button class="btn btn-primary" onclick="abrirNuevaCuenta()">+ Nueva cuenta</button>
+          </div>
+        </div>
+
+        <div id="cuentasLista">
+          <div class="spinner-row" style="text-align:center;padding:40px"><div class="spin"></div></div>
+        </div>
+
+      </div><!-- /seccionPlanCuentas -->
+
       <!-- ========== SECCIÓN PARÁMETROS ========== -->
       <div class="section" id="seccionParametros" style="display:none">
 
@@ -1017,6 +1115,170 @@ $authUser = authUser();
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /layout -->
+
+<!-- ===== Modal Asiento (crear/editar) ===== -->
+<div class="modal-backdrop" id="asModalBackdrop" onclick="if(event.target===this)cerrarModalAsiento()">
+  <div class="modal" style="max-width:880px">
+    <div class="modal-header">
+      <div class="modal-title" id="asModalTitulo">Nuevo asiento</div>
+      <button class="btn btn-ghost" onclick="cerrarModalAsiento()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row" style="display:grid;grid-template-columns:160px 1fr;gap:12px">
+        <div class="form-group">
+          <label>Fecha *</label>
+          <input type="date" id="asFecha">
+        </div>
+        <div class="form-group">
+          <label>Descripción *</label>
+          <input type="text" id="asDescripcion" placeholder="Ej: Venta del día - Cobro en efectivo">
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="margin:0">Líneas del asiento *</label>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="agregarLineaAsiento()">+ Agregar línea</button>
+        </div>
+        <div class="table-card" style="margin-top:0">
+          <table class="table" style="font-size:.88rem">
+            <thead>
+              <tr>
+                <th style="width:38%">Cuenta</th>
+                <th style="width:140px;text-align:right">Debe</th>
+                <th style="width:140px;text-align:right">Haber</th>
+                <th>Detalle</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="asLineasBody"></tbody>
+            <tfoot>
+              <tr style="font-weight:700;background:var(--bg)">
+                <td style="text-align:right">Totales:</td>
+                <td style="text-align:right" id="asTotalDebe">0,00</td>
+                <td style="text-align:right" id="asTotalHaber">0,00</td>
+                <td colspan="2" id="asBalance"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalAsiento()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAsiento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Detalle Asiento ===== -->
+<div class="modal-backdrop" id="asDetBackdrop" onclick="if(event.target===this)cerrarDetalleAsiento()">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header">
+      <div class="modal-title">Asiento N° <span id="asDetNumero"></span></div>
+      <button class="btn btn-ghost" onclick="cerrarDetalleAsiento()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="ped-detail-section">
+          <div class="ped-detail-label">Fecha</div>
+          <div id="asDetFecha" style="font-weight:600"></div>
+        </div>
+        <div class="ped-detail-section">
+          <div class="ped-detail-label">Total</div>
+          <div id="asDetTotal" style="font-weight:600"></div>
+        </div>
+      </div>
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Descripción</div>
+        <div id="asDetDescripcion" style="font-weight:600"></div>
+      </div>
+      <div>
+        <div class="ped-detail-label" style="margin-bottom:6px">Detalle</div>
+        <div class="table-card">
+          <table class="table" style="font-size:.85rem">
+            <thead>
+              <tr>
+                <th>Cuenta</th>
+                <th style="text-align:right">Debe</th>
+                <th style="text-align:right">Haber</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="asDetLineas"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarDetalleAsiento()">Cerrar</button>
+      <button class="btn btn-primary" id="btnAsDetEditar">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Cuenta (Plan de Cuentas) ===== -->
+<div class="modal-backdrop" id="ctaModalBackdrop" onclick="if(event.target===this)cerrarModalCuenta()">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title" id="ctaModalTitulo">Nueva cuenta</div>
+      <button class="btn btn-ghost" onclick="cerrarModalCuenta()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 2fr;gap:12px">
+        <div class="form-group">
+          <label>Código *</label>
+          <input type="text" id="ctaCodigo" placeholder="Ej: 1.1.05">
+        </div>
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" id="ctaNombre" placeholder="Nombre de la cuenta">
+        </div>
+      </div>
+      <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="ctaTipo">
+            <option value="activo">Activo</option>
+            <option value="pasivo">Pasivo</option>
+            <option value="patrimonio">Patrimonio</option>
+            <option value="ingreso">Ingreso</option>
+            <option value="egreso">Egreso</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Naturaleza *</label>
+          <select id="ctaNaturaleza">
+            <option value="deudora">Deudora</option>
+            <option value="acreedora">Acreedora</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Cuenta padre</label>
+        <select id="ctaParent">
+          <option value="">— Sin padre (cuenta raíz) —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea id="ctaDescripcion" rows="2" placeholder="Detalle u observaciones (opcional)"></textarea>
+      </div>
+      <div class="form-group" style="display:flex;gap:18px;align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="ctaImputable" checked> Permite movimientos (imputable)
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="ctaActiva" checked> Activa
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarModalCuenta()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCuenta()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== Modal Detalle Producto ===== -->
 <div class="modal-backdrop" id="prodDetBackdrop" onclick="if(event.target===this)cerrarDetalleProducto()">
@@ -1498,6 +1760,11 @@ $authUser = authUser();
       </div>
 
       <div class="ped-detail-section">
+        <div class="ped-detail-label">Vehículo</div>
+        <div id="repDetVehiculo" style="font-weight:600"></div>
+      </div>
+
+      <div class="ped-detail-section">
         <div class="ped-detail-label">Dirección</div>
         <div id="repDetDireccion"></div>
       </div>
@@ -1546,13 +1813,24 @@ $authUser = authUser();
         <input type="tel" id="repCelular" placeholder="Ej: 11 2345-6789">
       </div>
       <div class="form-group">
+        <label>Vehículo</label>
+        <select id="repVehiculo">
+          <option value="">— Sin especificar —</option>
+          <option value="bicicleta">🚲 Bicicleta</option>
+          <option value="moto">🛵 Moto</option>
+          <option value="auto">🚗 Auto</option>
+          <option value="furgon">🚐 Furgón</option>
+          <option value="camioneta">🚙 Camioneta</option>
+          <option value="camion">🚛 Camión</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Dirección</label>
         <input type="text" id="repDireccion" placeholder="Calle, número, piso/depto">
       </div>
       <div class="form-group">
-        <label>Ubicación en el mapa</label>
-        <div id="repMapInfo" class="config-hint" style="margin-bottom:8px">Sin ubicación seleccionada.</div>
-        <button type="button" class="btn btn-ghost" onclick="abrirMapaSelector('repartidor')">🗺️ Seleccionar en el mapa</button>
+        <label>Ubicación GPS</label>
+        <div id="repMapInfo" class="config-hint">Sin ubicación registrada (se actualiza desde la app).</div>
       </div>
       <div class="form-group">
         <label>Contraseña</label>
