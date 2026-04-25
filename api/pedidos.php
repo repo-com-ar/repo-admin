@@ -168,7 +168,7 @@ switch ($method) {
         }
 
         // Leer estado anterior para detectar transiciones
-        $prev = $pdo->prepare("SELECT estado, numero, cliente, direccion, repartidor_id FROM pedidos WHERE id = ?");
+        $prev = $pdo->prepare("SELECT estado, numero, cliente, cliente_id, direccion, repartidor_id FROM pedidos WHERE id = ?");
         $prev->execute([$id]);
         $antes = $prev->fetch();
         if (!$antes) {
@@ -210,6 +210,35 @@ switch ($method) {
                         'requireInteraction' => true,
                     ]
                 );
+            }
+
+            // Notificar al cliente del cambio de estado
+            if (!empty($antes['cliente_id'])) {
+                $titulosCliente = [
+                    'preparacion' => '👨‍🍳 Tu pedido está en preparación',
+                    'asignacion'  => '📋 Estamos asignando un repartidor',
+                    'reparto'     => '🛵 Tu pedido está en camino',
+                    'entregado'   => '✅ ¡Pedido entregado!',
+                    'cancelado'   => '❌ Tu pedido fue cancelado',
+                ];
+                $cuerposCliente = [
+                    'preparacion' => 'Pedido ' . ($antes['numero'] ?? '') . ' — Estamos preparándolo.',
+                    'asignacion'  => 'Pedido ' . ($antes['numero'] ?? '') . ' — Buscando repartidor.',
+                    'reparto'     => 'Pedido ' . ($antes['numero'] ?? '') . ' — Llega pronto a tu domicilio.',
+                    'entregado'   => 'Pedido ' . ($antes['numero'] ?? '') . ' — ¡Gracias por tu compra!',
+                    'cancelado'   => 'Pedido ' . ($antes['numero'] ?? '') . ' fue cancelado.',
+                ];
+                if (isset($titulosCliente[$estado])) {
+                    @push_enviar_a('cliente', (int)$antes['cliente_id'],
+                        $titulosCliente[$estado],
+                        $cuerposCliente[$estado],
+                        [
+                            'url'       => './',
+                            'tag'       => 'pedido-cli-' . $id,
+                            'pedido_id' => $id,
+                        ]
+                    );
+                }
             }
         }
 

@@ -733,7 +733,7 @@ const NAV_GROUPS = {
   navGroupVentas:    ['pedidos', 'clientes', 'carritos', 'repartidores'],
   navGroupCompras:   ['compras', 'proveedores'],
   navGroupFinanzas:  ['pagos'],
-  navGroupAdmin:     ['eventos', 'usuarios', 'suscriptores', 'config', 'parametros'],
+  navGroupAdmin:     ['notificaciones', 'mensajes', 'eventos', 'usuarios', 'suscriptores', 'config', 'parametros'],
 };
 
 function cambiarSeccion(seccion, navEl) {
@@ -793,6 +793,10 @@ function cambiarSeccion(seccion, navEl) {
     document.getElementById('seccionCompras').style.display = '';
     topbar.textContent = 'Gestión de Compras';
     cargarCompras();
+  } else if (seccion === 'notificaciones') {
+    document.getElementById('seccionNotificaciones').style.display = '';
+    topbar.textContent = 'Notificaciones Enviadas';
+    cargarNotificaciones();
   } else if (seccion === 'mensajes') {
     document.getElementById('seccionMensajes').style.display = '';
     topbar.textContent = 'Mensajes Enviados';
@@ -1041,6 +1045,150 @@ function cerrarDetalleEvento() {
 function onSearchEvento(val) {
   eventoBusqueda = val.trim();
   cargarEventos();
+}
+
+/* ===== Notificaciones ===== */
+let notificacionesData = [];
+let notifBusqueda      = '';
+let notifFiltroActor   = 'todos';
+let notifFiltroEstado  = 'todos';
+
+async function cargarNotificaciones() {
+  const tbody = document.getElementById('notificacionesBody');
+  tbody.innerHTML = '<tr class="spinner-row"><td colspan="8"><div class="spin"></div></td></tr>';
+
+  try {
+    const params = new URLSearchParams();
+    if (notifBusqueda)                params.set('q', notifBusqueda);
+    if (notifFiltroActor !== 'todos') params.set('actor_type', notifFiltroActor);
+    if (notifFiltroEstado !== 'todos') params.set('estado', notifFiltroEstado);
+    const qs   = params.toString() ? '?' + params.toString() : '';
+    const res  = await fetch('api/notificaciones' + qs);
+    const data = await res.json();
+    if (data.ok) {
+      notificacionesData = data.data || [];
+      document.getElementById('notifStatTotal').textContent        = data.stats.total;
+      document.getElementById('notifStatClientes').textContent     = data.stats.clientes;
+      document.getElementById('notifStatRepartidores').textContent = data.stats.repartidores;
+      document.getElementById('notifStatUsuarios').textContent     = data.stats.usuarios;
+      document.getElementById('notifStatFallidas').textContent     = data.stats.fallidas;
+      renderNotificaciones();
+    } else {
+      tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Error al cargar notificaciones</td></tr>';
+    }
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Sin conexión</td></tr>';
+  }
+}
+
+function renderNotificaciones() {
+  const tbody = document.getElementById('notificacionesBody');
+  if (!notificacionesData.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No hay notificaciones registradas</td></tr>';
+    return;
+  }
+  tbody.innerHTML = notificacionesData.map(n => {
+    const fecha = new Date(n.created_at).toLocaleString('es-AR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+    const tipoColor = n.actor_type === 'cliente' ? '#3b82f6'
+                    : n.actor_type === 'repartidor' ? '#8b5cf6'
+                    : '#16a34a';
+    const tipoLabel = n.actor_type === 'cliente' ? '👤 Cliente'
+                    : n.actor_type === 'repartidor' ? '🛵 Repartidor'
+                    : '⚙️ Usuario';
+    const tipo = '<span style="color:' + tipoColor + ';font-weight:600">' + tipoLabel + '</span>';
+    const estadoColor = n.estado === 'enviado' ? 'green'
+                      : n.estado === 'fallido' ? 'red' : 'var(--warn)';
+    const estadoLabel = n.estado === 'enviado' ? '✅ Enviado'
+                      : n.estado === 'fallido' ? '❌ Fallido'
+                      : '📵 Sin dispositivo';
+    const leida = n.leida ? '<span style="color:green">✓</span>' : '<span style="color:var(--warn)">○</span>';
+    const dest  = n.destinatario_nombre ? esc(n.destinatario_nombre) : ('#' + n.actor_id);
+    return '<tr style="cursor:pointer" onclick="abrirDetalleNotificacion(' + n.id + ')">'
+      + '<td>' + n.id + '</td>'
+      + '<td>' + fecha + '</td>'
+      + '<td>' + tipo + '</td>'
+      + '<td>' + dest + '</td>'
+      + '<td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(n.cuerpo) + '">'
+        + '<strong>' + esc(n.titulo) + '</strong> — ' + esc(n.cuerpo)
+        + '</td>'
+      + '<td style="color:' + estadoColor + ';font-weight:600">' + estadoLabel + '</td>'
+      + '<td style="text-align:center">' + leida + '</td>'
+      + '<td onclick="event.stopPropagation()"><button class="btn-icon-sm" title="Ver detalle" onclick="abrirDetalleNotificacion(' + n.id + ')">🔍</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function onSearchNotificacion(val) {
+  notifBusqueda = val.trim();
+  cargarNotificaciones();
+}
+
+function onFiltroNotifActor(val) {
+  notifFiltroActor = val;
+  cargarNotificaciones();
+}
+
+function onFiltroNotifEstado(val) {
+  notifFiltroEstado = val;
+  cargarNotificaciones();
+}
+
+function abrirDetalleNotificacion(id) {
+  const n = notificacionesData.find(x => x.id == id);
+  if (!n) return;
+
+  const fecha = new Date(n.created_at).toLocaleString('es-AR', {
+    weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+
+  const tipoColor = n.actor_type === 'cliente' ? '#3b82f6'
+                  : n.actor_type === 'repartidor' ? '#8b5cf6'
+                  : '#16a34a';
+  const tipoLabel = n.actor_type === 'cliente' ? '👤 Cliente'
+                  : n.actor_type === 'repartidor' ? '🛵 Repartidor'
+                  : '⚙️ Usuario';
+
+  const estadoColor = n.estado === 'enviado' ? 'var(--success)'
+                    : n.estado === 'fallido' ? 'var(--danger)' : 'var(--warn)';
+  const estadoLabel = n.estado === 'enviado' ? '✅ Enviado'
+                    : n.estado === 'fallido' ? '❌ Fallido'
+                    : '📵 Sin dispositivo';
+
+  const dest = n.destinatario_nombre ? n.destinatario_nombre : '(no encontrado)';
+
+  document.getElementById('notifDetId').textContent           = '#' + n.id;
+  document.getElementById('notifDetFecha').textContent        = fecha;
+  document.getElementById('notifDetTipo').innerHTML           = '<span style="color:' + tipoColor + ';font-weight:600">' + tipoLabel + '</span>';
+  document.getElementById('notifDetDestinatario').textContent = dest + ' (id ' + n.actor_id + ')';
+  document.getElementById('notifDetTitulo').textContent       = n.titulo || '';
+  document.getElementById('notifDetCuerpo').textContent       = n.cuerpo || '';
+
+  const dataRow  = document.getElementById('notifDetDataRow');
+  const dataPre  = document.getElementById('notifDetData');
+  if (n.data && Object.keys(n.data).length) {
+    dataRow.style.display = '';
+    dataPre.textContent   = JSON.stringify(n.data, null, 2);
+  } else {
+    dataRow.style.display = 'none';
+  }
+
+  document.getElementById('notifDetEstado').innerHTML = '<span style="color:' + estadoColor + ';font-weight:700">' + estadoLabel + '</span>';
+  document.getElementById('notifDetError').textContent = n.error || '';
+  document.getElementById('notifDetError').style.display = n.error ? '' : 'none';
+
+  document.getElementById('notifDetLeida').textContent = n.leida
+    ? 'Leída ' + (n.leida_at ? '(' + new Date(n.leida_at).toLocaleString('es-AR') + ')' : '')
+    : 'Sin leer';
+
+  document.getElementById('notifDetBackdrop').classList.add('open');
+}
+
+function cerrarDetalleNotificacion() {
+  document.getElementById('notifDetBackdrop').classList.remove('open');
 }
 
 /* ===== Mensajes ===== */

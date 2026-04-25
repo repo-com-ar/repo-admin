@@ -103,6 +103,9 @@ $authUser = authUser();
           <span class="nav-group-arrow">+</span>
         </a>
         <div class="nav-sub">
+          <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('notificaciones', this)" data-section="notificaciones">
+            <span class="nav-icon">🔔</span> Notificaciones
+          </a>
           <a class="nav-item nav-sub-item" href="#" onclick="cambiarSeccion('mensajes', this)" data-section="mensajes">
             <span class="nav-icon">💬</span> Mensajes
           </a>
@@ -697,6 +700,78 @@ $authUser = authUser();
         </div>
 
       </div><!-- /seccionCompras -->
+
+      <!-- ========== SECCIÓN NOTIFICACIONES ========== -->
+      <div class="section" id="seccionNotificaciones" style="display:none">
+
+        <!-- Stats notificaciones -->
+        <div class="stats-bar">
+          <div class="stat-card">
+            <span class="stat-label">Total</span>
+            <span class="stat-value orange" id="notifStatTotal">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Clientes</span>
+            <span class="stat-value" style="color:#3b82f6" id="notifStatClientes">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Repartidores</span>
+            <span class="stat-value" style="color:#8b5cf6" id="notifStatRepartidores">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Usuarios</span>
+            <span class="stat-value green" id="notifStatUsuarios">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Fallidas</span>
+            <span class="stat-value red" id="notifStatFallidas">—</span>
+          </div>
+        </div>
+
+        <!-- Toolbar notificaciones -->
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" type="text" placeholder="🔍 Buscar título o contenido..." oninput="onSearchNotificacion(this.value)">
+            <select id="filterNotifActor" onchange="onFiltroNotifActor(this.value)">
+              <option value="todos">Todos los destinatarios</option>
+              <option value="cliente">Clientes</option>
+              <option value="repartidor">Repartidores</option>
+              <option value="usuario">Usuarios</option>
+            </select>
+            <select id="filterNotifEstado" onchange="onFiltroNotifEstado(this.value)">
+              <option value="todos">Todos los estados</option>
+              <option value="enviado">✅ Enviado</option>
+              <option value="fallido">❌ Fallido</option>
+              <option value="sin_dispositivo">📵 Sin dispositivo</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-ghost" onclick="cargarNotificaciones()">🔄 Actualizar</button>
+          </div>
+        </div>
+
+        <!-- Tabla notificaciones -->
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fecha y hora</th>
+                <th>Tipo</th>
+                <th>Destinatario</th>
+                <th>Título / Mensaje</th>
+                <th>Estado</th>
+                <th>Leída</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="notificacionesBody">
+              <tr class="spinner-row"><td colspan="8"><div class="spin"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /seccionNotificaciones -->
 
       <!-- ========== SECCIÓN MENSAJES ========== -->
       <div class="section" id="seccionMensajes" style="display:none">
@@ -1632,6 +1707,61 @@ $authUser = authUser();
 </div>
 
 <!-- ===== Modal Detalle Mensaje ===== -->
+<!-- ===== Modal Detalle Notificación ===== -->
+<div class="modal-backdrop" id="notifDetBackdrop" onclick="if(event.target===this)cerrarDetalleNotificacion()">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="notifDetId">#—</div>
+        <div style="font-size:.78rem;color:var(--text-secondary)" id="notifDetFecha"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="cerrarDetalleNotificacion()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Tipo de destinatario</div>
+        <div id="notifDetTipo"></div>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Destinatario</div>
+        <div id="notifDetDestinatario" style="font-weight:600"></div>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Título</div>
+        <div id="notifDetTitulo" style="font-weight:600"></div>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Cuerpo</div>
+        <div id="notifDetCuerpo" style="white-space:pre-wrap;line-height:1.6;font-size:.92rem"></div>
+      </div>
+
+      <div class="ped-detail-section" id="notifDetDataRow">
+        <div class="ped-detail-label">Data adicional</div>
+        <pre id="notifDetData" style="background:var(--surface2);padding:10px;border-radius:6px;overflow:auto;font-size:12px;margin:0"></pre>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Estado</div>
+        <div id="notifDetEstado"></div>
+        <div id="notifDetError" style="color:red;font-size:.85rem;margin-top:4px"></div>
+      </div>
+
+      <div class="ped-detail-section">
+        <div class="ped-detail-label">Lectura</div>
+        <div id="notifDetLeida"></div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarDetalleNotificacion()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="msgDetBackdrop" onclick="if(event.target===this)cerrarDetalleMensaje()">
   <div class="modal" style="max-width:520px">
     <div class="modal-header">
