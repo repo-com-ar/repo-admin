@@ -125,6 +125,29 @@ switch ($method) {
         $stmt->execute($params);
         $rows = $stmt->fetchAll();
 
+        // Adjuntar detalle de cuentas a cada asiento listado (en una sola query)
+        if (!empty($rows)) {
+            $ids = array_column($rows, 'id');
+            $place = implode(',', array_fill(0, count($ids), '?'));
+            $stD = $pdo->prepare("
+                SELECT d.asiento_id, d.cuenta_id, d.debe, d.haber, d.descripcion, d.orden,
+                       c.codigo AS cuenta_codigo, c.nombre AS cuenta_nombre
+                FROM asientos_detalle d
+                LEFT JOIN cuentas c ON c.id = d.cuenta_id
+                WHERE d.asiento_id IN ($place)
+                ORDER BY d.asiento_id, d.orden ASC, d.id ASC
+            ");
+            $stD->execute($ids);
+            $detalleByAsiento = [];
+            foreach ($stD->fetchAll() as $d) {
+                $detalleByAsiento[(int)$d['asiento_id']][] = $d;
+            }
+            foreach ($rows as &$r) {
+                $r['detalle'] = $detalleByAsiento[(int)$r['id']] ?? [];
+            }
+            unset($r);
+        }
+
         $total      = (int) $pdo->query("SELECT COUNT(*) FROM asientos")->fetchColumn();
         $sumTotal   = (float) $pdo->query("SELECT COALESCE(SUM(total),0) FROM asientos")->fetchColumn();
         $delMes     = (int) $pdo->query("SELECT COUNT(*) FROM asientos WHERE YEAR(fecha)=YEAR(CURDATE()) AND MONTH(fecha)=MONTH(CURDATE())")->fetchColumn();

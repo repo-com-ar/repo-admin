@@ -1787,7 +1787,29 @@ $authUser = authUser();
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="cerrarDetalleRepartidor()">Cerrar</button>
+      <button class="btn btn-ghost" id="btnRepDetMapa" onclick="abrirMapaRepartidor()">📍 Ver en mapa</button>
       <button class="btn btn-primary" id="btnRepDetEditar">✏️ Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal Mapa en tiempo real (Repartidor) ===== -->
+<div class="modal-backdrop" id="repMapaBackdrop" onclick="if(event.target===this)cerrarMapaRepartidor()">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <div class="modal-title">Ubicación del repartidor <span id="repMapaNombre"></span></div>
+      <button class="btn btn-ghost" onclick="cerrarMapaRepartidor()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="repMapaEstado" style="padding:10px 20px;font-size:.85rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">
+        <span id="repMapaOnlineIndicator">⚪</span>
+        <span id="repMapaOnlineLabel" style="color:var(--muted)">—</span>
+        <span id="repMapaUltVez" style="color:var(--muted);font-size:.78rem;margin-left:auto"></span>
+      </div>
+      <div id="repMapaContainer" style="height:460px;width:100%;background:var(--bg)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cerrarMapaRepartidor()">Cerrar</button>
     </div>
   </div>
 </div>

@@ -2309,6 +2309,11 @@ function abrirDetalleRepartidor(id) {
     abrirEditarRepartidor(id);
   };
 
+  document.getElementById('btnRepDetMapa').onclick = function() {
+    cerrarDetalleRepartidor();
+    abrirMapaRepartidor(id, r.nombre);
+  };
+
   document.getElementById('repDetBackdrop').classList.add('open');
 }
 
@@ -2411,6 +2416,117 @@ function eliminarRepartidor(id, nombre) {
     }
   };
   document.getElementById('confirmBackdrop').classList.add('open');
+}
+
+/* ===== Mapa en tiempo real — Repartidor ===== */
+var repMapaId      = null;
+var repMapaTimer   = null;
+var repMapaObj     = null;   // instancia google.maps.Map
+var repMapaMarker  = null;   // AdvancedMarkerElement
+var repMapaLastPos = null;   // {lat, lng} última posición conocida
+
+function abrirMapaRepartidor(id, nombre) {
+  repMapaId = id;
+  document.getElementById('repMapaNombre').textContent = nombre || '';
+  document.getElementById('repMapaBackdrop').classList.add('open');
+
+  // Inicializar mapa la primera vez (o reusar si ya existe)
+  if (!repMapaObj) {
+    var centro = repMapaLastPos || { lat: -34.6037, lng: -58.3816 }; // Buenos Aires por defecto
+    repMapaObj = new google.maps.Map(document.getElementById('repMapaContainer'), {
+      center: centro,
+      zoom: 15,
+      mapId: 'rep_realtime_map',
+      disableDefaultUI: false,
+      zoomControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+    });
+  }
+
+  // Fetch inmediato y luego cada 6 segundos
+  fetchUbicacionRepartidor();
+  repMapaTimer = setInterval(fetchUbicacionRepartidor, 6000);
+}
+
+async function fetchUbicacionRepartidor() {
+  if (!repMapaId) return;
+  try {
+    var res  = await fetch(REP_API + '?id=' + repMapaId);
+    var data = await res.json();
+    if (!data.ok) return;
+    actualizarMapaRepartidor(data.data);
+  } catch (e) { /* red caída, silencioso */ }
+}
+
+function actualizarMapaRepartidor(r) {
+  var online  = Number(r.online) === 1;
+  var lat     = r.lat  ? parseFloat(r.lat)  : null;
+  var lng     = r.lng  ? parseFloat(r.lng)  : null;
+
+  // Actualizar barra de estado
+  var indEl   = document.getElementById('repMapaOnlineIndicator');
+  var lblEl   = document.getElementById('repMapaOnlineLabel');
+  var ultEl   = document.getElementById('repMapaUltVez');
+  if (online) {
+    indEl.textContent = '🟢';
+    lblEl.textContent = 'En línea';
+    lblEl.style.color = '#22c55e';
+  } else {
+    indEl.textContent = '⚪';
+    lblEl.textContent = 'Fuera de línea';
+    lblEl.style.color = 'var(--muted)';
+  }
+  if (r.last_seen) {
+    var ts = new Date(r.last_seen.replace(' ', 'T'));
+    ultEl.textContent = 'Últ. actualización: ' + ts.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false });
+  } else {
+    ultEl.textContent = 'Sin datos de posición';
+  }
+
+  if (!lat || !lng || !repMapaObj) return;
+
+  var pos = { lat: lat, lng: lng };
+
+  // Crear o actualizar el marcador
+  if (!repMapaMarker) {
+    // AdvancedMarkerElement con un pin personalizado
+    var pinEl = document.createElement('div');
+    pinEl.innerHTML =
+      '<div style="background:#FFA000;color:#fff;border-radius:50% 50% 50% 0;' +
+      'width:36px;height:36px;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,.35);' +
+      'display:flex;align-items:center;justify-content:center">' +
+        '<span style="transform:rotate(45deg);font-size:16px">🛵</span>' +
+      '</div>';
+    repMapaMarker = new google.maps.marker.AdvancedMarkerElement({
+      map:      repMapaObj,
+      position: pos,
+      content:  pinEl,
+      title:    r.nombre || 'Repartidor',
+    });
+  } else {
+    repMapaMarker.position = pos;
+  }
+
+  // Mover el mapa suavemente si el pin salió del área visible
+  var bounds = repMapaObj.getBounds();
+  if (!bounds || !bounds.contains(pos)) {
+    repMapaObj.panTo(pos);
+  }
+
+  repMapaLastPos = pos;
+}
+
+function cerrarMapaRepartidor() {
+  clearInterval(repMapaTimer);
+  repMapaTimer  = null;
+  repMapaId     = null;
+  // Limpiar el marcador para la próxima apertura
+  if (repMapaMarker) { repMapaMarker.map = null; repMapaMarker = null; }
+  repMapaObj    = null;
+  document.getElementById('repMapaBackdrop').classList.remove('open');
+  // Vaciar el contenedor para que el mapa se recree limpio la próxima vez
+  document.getElementById('repMapaContainer').innerHTML = '';
 }
 
 /* ===== Suscriptores (push notifications) ===== */
@@ -4492,7 +4608,29 @@ function renderAsientos() {
 
 function renderFilaAsiento(a) {
   const fecha = a.fecha ? new Date(a.fecha + 'T00:00:00').toLocaleDateString('es-AR') : '—';
-  return '<tr style="cursor:pointer" onclick="abrirDetalleAsiento(' + a.id + ')">' +
+
+  // Sub-líneas: una por cada movimiento del asiento
+  let subFilas = '';
+  if (a.detalle && a.detalle.length) {
+    subFilas = a.detalle.map(d => {
+      const cuenta = (d.cuenta_codigo ? '<code style="font-size:.75rem;color:var(--muted)">' + esc(d.cuenta_codigo) + '</code> ' : '')
+                   + esc(d.cuenta_nombre || '—');
+      const importe = Number(d.debe) > 0
+        ? '<span style="color:#3b82f6">$' + fmtMoney(d.debe) + '</span>'
+        : '<span style="color:#ef4444">$' + fmtMoney(d.haber) + '</span>';
+      const tipo = Number(d.debe) > 0
+        ? '<span style="color:#3b82f6;font-weight:600;font-size:.7rem;letter-spacing:.5px">DEBE</span>'
+        : '<span style="color:#ef4444;font-weight:600;font-size:.7rem;letter-spacing:.5px">HABER</span>';
+      const det = d.descripcion ? ' <span style="color:var(--text-secondary);font-size:.78rem">— ' + esc(d.descripcion) + '</span>' : '';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:3px 0;font-size:.82rem">' +
+               '<span style="width:50px;flex-shrink:0">' + tipo + '</span>' +
+               '<span style="flex:1;min-width:0">' + cuenta + det + '</span>' +
+               '<span style="width:120px;text-align:right;font-weight:600">' + importe + '</span>' +
+             '</div>';
+    }).join('');
+  }
+
+  return '<tr style="cursor:pointer;border-bottom:none" onclick="abrirDetalleAsiento(' + a.id + ')">' +
     '<td><strong>#' + a.numero + '</strong></td>' +
     '<td>' + fecha + '</td>' +
     '<td>' + esc(a.descripcion || '') + '</td>' +
@@ -4502,7 +4640,15 @@ function renderFilaAsiento(a) {
       '<button class="btn-icon-sm" title="Editar" onclick="abrirEditarAsiento(' + a.id + ')">✏️</button>' +
       '<button class="btn-icon-sm" title="Eliminar" onclick="eliminarAsiento(' + a.id + ',' + a.numero + ')">🗑️</button>' +
     '</div></td>' +
-    '</tr>';
+    '</tr>' +
+    (subFilas
+      ? '<tr class="as-row-detalle" style="cursor:pointer" onclick="abrirDetalleAsiento(' + a.id + ')">' +
+          '<td></td>' +
+          '<td colspan="4" style="padding-top:0;padding-bottom:10px">' +
+            '<div style="border-left:3px solid var(--border);padding:2px 0 2px 12px;margin-left:4px">' + subFilas + '</div>' +
+          '</td>' +
+        '</tr>'
+      : '');
 }
 
 async function asegurarCuentasImputables() {

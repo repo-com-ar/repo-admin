@@ -84,8 +84,26 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
 
-    // ---- GET: listar repartidores ----
+    // ---- GET: listar repartidores (o uno solo con ?id=X) ----
     case 'GET':
+        // Petición de un único repartidor (para polling de ubicación)
+        if (isset($_GET['id']) && (int)$_GET['id'] > 0) {
+            $st = $pdo->prepare(
+                "SELECT id, nombre, lat, lng, ubicacion_activa, ubicacion_at, last_seen,
+                        (last_seen IS NOT NULL AND last_seen >= (NOW() - INTERVAL 60 SECOND)) AS online
+                 FROM repartidores WHERE id = ?"
+            );
+            $st->execute([(int)$_GET['id']]);
+            $r = $st->fetch();
+            if (!$r) {
+                http_response_code(404);
+                echo json_encode(['ok' => false, 'error' => 'Repartidor no encontrado']);
+            } else {
+                echo json_encode(['ok' => true, 'data' => $r]);
+            }
+            break;
+        }
+
         $q = isset($_GET['q']) ? trim($_GET['q']) : '';
 
         $where  = [];
